@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2014 - 2017 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
 import org.traccar.helper.BitUtil;
 import org.traccar.helper.UnitsConverter;
+import org.traccar.model.CellTower;
+import org.traccar.model.Network;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -40,7 +42,7 @@ public class EelinkProtocolDecoder extends BaseProtocolDecoder {
     public static final int MSG_STATE = 0x05;
     public static final int MSG_SMS = 0x06;
     public static final int MSG_OBD = 0x07;
-    public static final int MSG_INTERACTIVE = 0x80;
+    public static final int MSG_DOWNLINK = 0x80;
     public static final int MSG_DATA = 0x81;
 
     public static final int MSG_NORMAL = 0x12;
@@ -64,6 +66,36 @@ public class EelinkProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
+    private String decodeAlarm(Short value) {
+        switch (value) {
+            case 0x01:
+                return Position.ALARM_POWER_OFF;
+            case 0x02:
+                return Position.ALARM_SOS;
+            case 0x03:
+                return Position.ALARM_LOW_BATTERY;
+            case 0x04:
+                return Position.ALARM_VIBRATION;
+            case 0x08:
+            case 0x09:
+                return Position.ALARM_GPS_ANTENNA_CUT;
+            case 0x81:
+                return Position.ALARM_LOW_SPEED;
+            case 0x82:
+                return Position.ALARM_OVERSPEED;
+            case 0x83:
+                return Position.ALARM_GEOFENCE_ENTER;
+            case 0x84:
+                return Position.ALARM_GEOFENCE_EXIT;
+            case 0x85:
+                return Position.ALARM_ACCIDENT;
+            case 0x86:
+                return Position.ALARM_FALL_DOWN;
+            default:
+                return null;
+        }
+    }
+
     private Position decodeOld(DeviceSession deviceSession, ChannelBuffer buf, int type, int index) {
 
         Position position = new Position();
@@ -78,25 +110,39 @@ public class EelinkProtocolDecoder extends BaseProtocolDecoder {
         position.setSpeed(UnitsConverter.knotsFromKph(buf.readUnsignedByte()));
         position.setCourse(buf.readUnsignedShort());
 
-        position.set(Position.KEY_MCC, buf.readUnsignedShort());
-        position.set(Position.KEY_MNC, buf.readUnsignedShort());
-        position.set(Position.KEY_LAC, buf.readUnsignedShort());
-        position.set(Position.KEY_CID, buf.readUnsignedMedium());
+        position.setNetwork(new Network(CellTower.from(
+                buf.readUnsignedShort(), buf.readUnsignedShort(), buf.readUnsignedShort(), buf.readUnsignedMedium())));
 
         position.setValid((buf.readUnsignedByte() & 0x01) != 0);
 
         if (type == MSG_ALARM) {
-            position.set(Position.KEY_ALARM, buf.readUnsignedByte());
+            position.set(Position.KEY_ALARM, decodeAlarm(buf.readUnsignedByte()));
         }
 
-        if (type == MSG_STATE) {
-            position.set(Position.KEY_STATUS, buf.readUnsignedByte());
+        if (buf.readableBytes() >= 2 * 5) {
+
+            int status = buf.readUnsignedShort();
+            if (BitUtil.check(status, 1)) {
+                position.set(Position.KEY_IGNITION, BitUtil.check(status, 2));
+            }
+            if (BitUtil.check(status, 7)) {
+                position.set(Position.KEY_CHARGE, BitUtil.check(status, 8));
+            }
+            position.set(Position.KEY_STATUS, status);
+
+            position.set(Position.KEY_BATTERY, buf.readUnsignedShort() + "mV");
+
+            buf.readUnsignedShort(); // signal strength
+
+            position.set(Position.PREFIX_ADC + 1, buf.readUnsignedShort());
+            position.set(Position.PREFIX_ADC + 2, buf.readUnsignedShort());
+
         }
 
         return position;
     }
 
-    private Position decodeNew(DeviceSession deviceSession, ChannelBuffer buf, int type, int index) {
+    private Position decodeNew(DeviceSession deviceSession, ChannelBuffer buf, int index) {
 
         Position position = new Position();
         position.setDeviceId(deviceSession.getDeviceId());
@@ -118,11 +164,9 @@ public class EelinkProtocolDecoder extends BaseProtocolDecoder {
         }
 
         if (BitUtil.check(flags, 1)) {
-            position.set(Position.KEY_MCC, buf.readUnsignedShort());
-            position.set(Position.KEY_MNC, buf.readUnsignedShort());
-            position.set(Position.KEY_LAC, buf.readUnsignedShort());
-            position.set(Position.KEY_CID, buf.readUnsignedInt());
-            position.set(Position.KEY_GSM, buf.readUnsignedByte());
+            position.setNetwork(new Network(CellTower.from(
+                    buf.readUnsignedShort(), buf.readUnsignedShort(),
+                    buf.readUnsignedShort(), buf.readUnsignedInt(), buf.readUnsignedByte())));
         }
 
         if (BitUtil.check(flags, 2)) {
@@ -176,7 +220,7 @@ public class EelinkProtocolDecoder extends BaseProtocolDecoder {
             if (type == MSG_GPS || type == MSG_ALARM || type == MSG_STATE || type == MSG_SMS) {
                 return decodeOld(deviceSession, buf, type, index);
             } else if (type >= MSG_NORMAL && type <= MSG_OBD_CODE) {
-                return decodeNew(deviceSession, buf, type, index);
+                return decodeNew(deviceSession, buf, index);
             }
         }
 

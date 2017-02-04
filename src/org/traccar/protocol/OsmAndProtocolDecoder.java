@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@ package org.traccar.protocol;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
@@ -38,6 +40,14 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
 
     public OsmAndProtocolDecoder(OsmAndProtocol protocol) {
         super(protocol);
+    }
+
+    private void sendResponse(Channel channel, HttpResponseStatus status) {
+        if (channel != null) {
+            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+            response.headers().add(HttpHeaders.Names.CONTENT_LENGTH, 0);
+            channel.write(response);
+        }
     }
 
     @Override
@@ -63,10 +73,7 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
                 case "deviceid":
                     DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, value);
                     if (deviceSession == null) {
-                        if (channel != null) {
-                            channel.write(
-                                    new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST));
-                        }
+                        sendResponse(channel, HttpResponseStatus.BAD_REQUEST);
                         return null;
                     }
                     position.setDeviceId(deviceSession.getDeviceId());
@@ -97,6 +104,11 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
                 case "lon":
                     position.setLongitude(Double.parseDouble(value));
                     break;
+                case "location":
+                    String[] location = value.split(",");
+                    position.setLatitude(Double.parseDouble(location[0]));
+                    position.setLongitude(Double.parseDouble(location[1]));
+                    break;
                 case "speed":
                     position.setSpeed(Double.parseDouble(value));
                     break;
@@ -106,6 +118,9 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
                     break;
                 case "altitude":
                     position.setAltitude(Double.parseDouble(value));
+                    break;
+                case "accuracy":
+                    position.setAccuracy(Double.parseDouble(value));
                     break;
                 case "hdop":
                     position.set(Position.KEY_HDOP, Double.parseDouble(value));
@@ -123,11 +138,13 @@ public class OsmAndProtocolDecoder extends BaseProtocolDecoder {
             position.setTime(new Date());
         }
 
-        if (channel != null) {
-            channel.write(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
+        if (position.getDeviceId() != 0) {
+            sendResponse(channel, HttpResponseStatus.OK);
+            return position;
+        } else {
+            sendResponse(channel, HttpResponseStatus.BAD_REQUEST);
+            return null;
         }
-
-        return position;
     }
 
 }

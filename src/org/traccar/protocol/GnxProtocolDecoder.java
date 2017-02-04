@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,13 +71,10 @@ public class GnxProtocolDecoder extends BaseProtocolDecoder {
         String type = sentence.substring(5, 8);
 
         Pattern pattern;
-        switch (type) {
-            case "MIF":
-                pattern = PATTERN_MIF;
-                break;
-            default:
-                pattern = PATTERN_OTHER;
-                break;
+        if (type.equals("MIF")) {
+            pattern = PATTERN_MIF;
+        } else {
+            pattern = PATTERN_OTHER;
         }
 
         Parser parser = new Parser(pattern, sentence);
@@ -115,12 +112,8 @@ public class GnxProtocolDecoder extends BaseProtocolDecoder {
         position.setLatitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_HEM));
         position.setLongitude(parser.nextCoordinate(Parser.CoordinateFormat.DEG_HEM));
 
-        switch (type) {
-            case "MIF":
-                position.set(Position.KEY_RFID, parser.next());
-                break;
-            default:
-                break;
+        if (type.equals("MIF")) {
+            position.set(Position.KEY_RFID, parser.next());
         }
 
         return position;

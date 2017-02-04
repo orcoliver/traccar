@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ public class MeitrackProtocolEncoder extends StringProtocolEncoder {
                 return formatCommand(command, 'D', "D03,1,camera_picture.jpg");
             case Command.TYPE_SEND_SMS:
                 return formatCommand(command, 'f', "C02,0,"
-                        + attributes.get(Command.KEY_PHONE_NUMBER) + "," + attributes.get(Command.KEY_MESSAGE));
+                        + attributes.get(Command.KEY_PHONE) + "," + attributes.get(Command.KEY_MESSAGE));
             default:
                 Log.warning(new UnsupportedOperationException(command.getType()));
                 break;

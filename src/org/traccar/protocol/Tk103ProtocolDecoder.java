@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2012 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
+import org.traccar.model.CellTower;
+import org.traccar.model.Network;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -41,9 +43,9 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
             .number("d*")                        // imei?
             .number("(dd)(dd)(dd),?")            // date
             .expression("([AV]),?")              // validity
-            .number("(dd)(dd.d+)")               // latitude
+            .number("(d+)(dd.d+)")               // latitude
             .expression("([NS]),?")
-            .number("(ddd)(dd.d+)")              // longitude
+            .number("(d+)(dd.d+)")               // longitude
             .expression("([EW]),?")
             .number("(d+.d)(?:d*,)?")            // speed
             .number("(dd)(dd)(dd),?")            // time
@@ -51,6 +53,7 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
             .number("(?:([01]{8})|(x{8}))?,?")   // state
             .number("(?:L(x+))?")                // odometer
             .any()
+            .number("([+-]ddd.d)?")              // temperature
             .text(")").optional()
             .compile();
 
@@ -75,6 +78,25 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
             .any()
             .compile();
 
+    private String decodeAlarm(int value) {
+        switch (value) {
+            case 1:
+                return Position.ALARM_ACCIDENT;
+            case 2:
+                return Position.ALARM_SOS;
+            case 3:
+                return Position.ALARM_VIBRATION;
+            case 4:
+                return Position.ALARM_LOW_SPEED;
+            case 5:
+                return Position.ALARM_OVERSPEED;
+            case 6:
+                return Position.ALARM_GEOFENCE_EXIT;
+            default:
+                return null;
+        }
+    }
+
     @Override
     protected Object decode(
             Channel channel, SocketAddress remoteAddress, Object msg) throws Exception {
@@ -91,11 +113,17 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
         if (channel != null) {
             String id = sentence.substring(0, 12);
             String type = sentence.substring(12, 16);
-            if (type.equals("BP00")) {
-                String content = sentence.substring(sentence.length() - 3);
-                channel.write("(" + id + "AP01" + content + ")");
-            } else if (type.equals("BP05")) {
-                channel.write("(" + id + "AP05)");
+            if (type.equals("BP00") || type.equals("BP05")) {
+                String content = sentence.substring(16);
+                if (content.length() >= 15) {
+                    getDeviceSession(channel, remoteAddress, content.substring(0, 15));
+                }
+                if (type.equals("BP00")) {
+                    channel.write("(" + id + "AP01HSO)");
+                    return null;
+                } else if (type.equals("BP05")) {
+                    channel.write("(" + id + "AP05)");
+                }
             }
         }
 
@@ -139,10 +167,8 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
 
             getLastLocation(position, null);
 
-            position.set(Position.KEY_MCC, parser.nextInt());
-            position.set(Position.KEY_MNC, parser.nextInt());
-            position.set(Position.KEY_LAC, parser.nextInt(16));
-            position.set(Position.KEY_CID, parser.nextInt(16));
+            position.setNetwork(new Network(CellTower.from(
+                    parser.nextInt(), parser.nextInt(), parser.nextInt(16), parser.nextInt(16))));
 
             return position;
         }
@@ -160,7 +186,7 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
 
         int alarm = sentence.indexOf("BO01");
         if (alarm != -1) {
-            position.set(Position.KEY_ALARM, Integer.parseInt(sentence.substring(alarm + 4, alarm + 5)));
+            position.set(Position.KEY_ALARM, decodeAlarm(Integer.parseInt(sentence.substring(alarm + 4, alarm + 5))));
         }
 
         DateBuilder dateBuilder = new DateBuilder();
@@ -191,7 +217,6 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
 
         position.setCourse(parser.nextDouble());
 
-        // Status
         String status = parser.next();
         if (status != null) {
             position.set(Position.KEY_STATUS, status); // binary status
@@ -204,6 +229,10 @@ public class Tk103ProtocolDecoder extends BaseProtocolDecoder {
 
         if (parser.hasNext()) {
             position.set(Position.KEY_ODOMETER, parser.nextLong(16));
+        }
+
+        if (parser.hasNext()) {
+            position.set(Position.PREFIX_TEMP + 1, parser.nextDouble());
         }
 
         return position;

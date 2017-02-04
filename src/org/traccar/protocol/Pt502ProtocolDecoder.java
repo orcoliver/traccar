@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2012 - 2016 Anton Tananaev (anton@traccar.org)
  * Copyright 2012 Luis Parada (luis.parada@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,14 +29,17 @@ import java.util.regex.Pattern;
 
 public class Pt502ProtocolDecoder extends BaseProtocolDecoder {
 
+    private static final int MAX_CHUNK_SIZE = 960;
+
+    private byte[] photo;
+
     public Pt502ProtocolDecoder(Pt502Protocol protocol) {
         super(protocol);
     }
 
     private static final Pattern PATTERN = new PatternBuilder()
             .any().text("$")
-            .expression("[A-Z]{3}")
-            .number("d?,")                       // type
+            .expression("([^,]+),")              // type
             .number("(d+),")                     // id
             .number("(dd)(dd)(dd).(ddd),")       // time
             .expression("([AV]),")               // validity
@@ -57,18 +60,30 @@ public class Pt502ProtocolDecoder extends BaseProtocolDecoder {
             .any()
             .compile();
 
+    private String decodeAlarm(String value) {
+        switch (value) {
+            case "TOW":
+                return Position.ALARM_TOW;
+            case "HDA":
+                return Position.ALARM_ACCELETATION;
+            case "HDB":
+                return Position.ALARM_BREAKING;
+            case "FDA":
+                return Position.ALARM_FATIGUE_DRIVING;
+            case "SKA":
+                return Position.ALARM_VIBRATION;
+            case "PMA":
+                return Position.ALARM_MOVEMENT;
+            default:
+                return null;
+        }
+    }
+
     @Override
     protected Object decode(
             Channel channel, SocketAddress remoteAddress, Object msg) throws Exception {
 
         String sentence = (String) msg;
-
-        if (sentence.startsWith("$PHO")) {
-            if (channel != null) {
-                channel.write("#PHD0," + sentence.substring(4));
-            }
-            return null;
-        }
 
         Parser parser = new Parser(PATTERN, sentence);
         if (!parser.matches()) {
@@ -77,6 +92,15 @@ public class Pt502ProtocolDecoder extends BaseProtocolDecoder {
 
         Position position = new Position();
         position.setProtocol(getProtocolName());
+
+        String type = parser.next();
+
+        if (type.startsWith("PHO") && channel != null) {
+            photo = new byte[Integer.parseInt(type.substring(3))];
+            channel.write("#PHD0," + Math.min(photo.length, MAX_CHUNK_SIZE) + "\r\n");
+        }
+
+        position.set(Position.KEY_ALARM, decodeAlarm(type));
 
         DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
         if (deviceSession == null) {
@@ -106,13 +130,13 @@ public class Pt502ProtocolDecoder extends BaseProtocolDecoder {
             }
         }
 
-        position.set(Position.KEY_ODOMETER, parser.next());
+        position.set(Position.KEY_ODOMETER, parser.nextInt());
         position.set(Position.KEY_RFID, parser.next());
 
         if (parser.hasNext()) {
             int value = parser.nextInt(16);
             position.set(Position.KEY_BATTERY, value >> 8);
-            position.set(Position.KEY_GSM, (value >> 4) & 0xf);
+            position.set(Position.KEY_RSSI, (value >> 4) & 0xf);
             position.set(Position.KEY_SATELLITES, value & 0xf);
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2017 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import org.traccar.DeviceSession;
 import org.traccar.helper.BitUtil;
 import org.traccar.helper.ObdDecoder;
 import org.traccar.helper.UnitsConverter;
+import org.traccar.model.CellTower;
+import org.traccar.model.Network;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -55,7 +57,7 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
     private static final short DATA_RFID = 0x0E;
     private static final short DATA_EVENT = 0x10;
 
-    private void decodeObd(Position position, ChannelBuffer buf, short length) {
+    private void decodeObd(Position position, ChannelBuffer buf, int length) {
 
         int end = buf.readerIndex() + length;
 
@@ -66,7 +68,7 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
-    private void decodeJ1708(Position position, ChannelBuffer buf, short length) {
+    private void decodeJ1708(Position position, ChannelBuffer buf, int length) {
 
         int end = buf.readerIndex() + length;
 
@@ -90,28 +92,72 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
         int value = buf.readUnsignedByte();
 
         if (BitUtil.check(value, 0)) {
-            position.set("rapid-acceleration", true);
+            position.set("rapidAcceleration", true);
         }
         if (BitUtil.check(value, 1)) {
-            position.set("rough-braking", true);
+            position.set("roughBraking", true);
         }
         if (BitUtil.check(value, 2)) {
-            position.set("harsh-course", true);
+            position.set("harshCourse", true);
         }
         if (BitUtil.check(value, 3)) {
-            position.set("no-warm-up", true);
+            position.set("noWarmUp", true);
         }
         if (BitUtil.check(value, 4)) {
-            position.set("long-idle", true);
+            position.set("longIdle", true);
         }
         if (BitUtil.check(value, 5)) {
-            position.set("fatigue-driving", true);
+            position.set("fatigueDriving", true);
         }
         if (BitUtil.check(value, 6)) {
-            position.set("rough-terrain", true);
+            position.set("roughTerrain", true);
         }
         if (BitUtil.check(value, 7)) {
-            position.set("high-rpm", true);
+            position.set("highRpm", true);
+        }
+    }
+
+    private String decodeAlarm(int alarm) {
+        if (BitUtil.check(alarm, 0)) {
+            return Position.ALARM_POWER_OFF;
+        }
+        if (BitUtil.check(alarm, 1)) {
+            return Position.ALARM_MOVEMENT;
+        }
+        if (BitUtil.check(alarm, 2)) {
+            return Position.ALARM_OVERSPEED;
+        }
+        if (BitUtil.check(alarm, 4)) {
+            return Position.ALARM_GEOFENCE;
+        }
+        if (BitUtil.check(alarm, 10)) {
+            return Position.ALARM_SOS;
+        }
+        return null;
+    }
+
+    private void decodeAdc(Position position, ChannelBuffer buf, int length) {
+        for (int i = 0; i < length / 2; i++) {
+            int value = buf.readUnsignedShort();
+            int id = BitUtil.from(value, 12);
+            value = BitUtil.to(value, 12);
+            switch (id) {
+                case 0:
+                    position.set(Position.KEY_POWER, value * (100 + 10) / 4096.0 - 10);
+                    break;
+                case 1:
+                    position.set(Position.PREFIX_TEMP + 1, value * (125 + 55) / 4096.0 - 55);
+                    break;
+                case 2:
+                    position.set(Position.KEY_BATTERY, value * (100 + 10) / 4096.0 - 10);
+                    break;
+                case 3:
+                    position.set(Position.PREFIX_ADC + 1, value * (100 + 10) / 4096.0 - 10);
+                    break;
+                default:
+                    position.set(Position.PREFIX_IO + id, value);
+                    break;
+            }
         }
     }
 
@@ -147,8 +193,8 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
 
         while (buf.readableBytes() > 3) {
 
-            short type = buf.readUnsignedByte();
-            short length = buf.readUnsignedByte();
+            int type = buf.readUnsignedByte();
+            int length = type == DATA_CANBUS ? buf.readUnsignedShort() : buf.readUnsignedByte();
 
             switch (type) {
 
@@ -163,15 +209,15 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
                     break;
 
                 case DATA_LBS:
-                    position.set(Position.KEY_MCC, buf.readUnsignedShort());
-                    position.set(Position.KEY_MNC, buf.readUnsignedShort());
-                    position.set(Position.KEY_LAC, buf.readUnsignedShort());
                     if (length == 11) {
-                        position.set(Position.KEY_CID, buf.readUnsignedInt());
+                        position.setNetwork(new Network(CellTower.from(
+                                buf.readUnsignedShort(), buf.readUnsignedShort(),
+                                buf.readUnsignedShort(), buf.readUnsignedInt(), -buf.readUnsignedByte())));
                     } else {
-                        position.set(Position.KEY_CID, buf.readUnsignedShort());
+                        position.setNetwork(new Network(CellTower.from(
+                                buf.readUnsignedShort(), buf.readUnsignedShort(),
+                                buf.readUnsignedShort(), buf.readUnsignedShort(), -buf.readUnsignedByte())));
                     }
-                    position.set(Position.KEY_GSM, -buf.readUnsignedByte());
                     if (length > 9 && length != 11) {
                         buf.skipBytes(length - 9);
                     }
@@ -181,7 +227,7 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
                     int status = buf.readUnsignedShort();
                     position.set(Position.KEY_IGNITION, BitUtil.check(status, 9));
                     position.set(Position.KEY_STATUS, status);
-                    position.set(Position.KEY_ALARM, buf.readUnsignedShort());
+                    position.set(Position.KEY_ALARM, decodeAlarm(buf.readUnsignedShort()));
                     break;
 
                 case DATA_ODOMETER:
@@ -189,15 +235,12 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
                     break;
 
                 case DATA_ADC:
-                    for (int i = 0; i < length / 2; i++) {
-                        int value = buf.readUnsignedShort();
-                        position.set(Position.PREFIX_ADC + BitUtil.from(value, 12), BitUtil.to(value, 12));
-                    }
+                    decodeAdc(position, buf, length);
                     break;
 
                 case DATA_GEOFENCE:
-                    position.set("geofence-in", buf.readUnsignedInt());
-                    position.set("geofence-alarm", buf.readUnsignedInt());
+                    position.set("geofenceIn", buf.readUnsignedInt());
+                    position.set("geofenceAlarm", buf.readUnsignedInt());
                     break;
 
                 case DATA_OBD2:
@@ -205,7 +248,7 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
                     break;
 
                 case DATA_FUEL:
-                    position.set("fuel-consumption", buf.readUnsignedInt() / 10000.0);
+                    position.set("fuelConsumption", buf.readUnsignedInt() / 10000.0);
                     break;
 
                 case DATA_OBD2_ALARM:
@@ -236,7 +279,7 @@ public class UlbotechProtocolDecoder extends BaseProtocolDecoder {
                 case DATA_EVENT:
                     position.set(Position.KEY_EVENT, buf.readUnsignedByte());
                     if (length > 1) {
-                        position.set("event-mask", buf.readUnsignedInt());
+                        position.set("eventMask", buf.readUnsignedInt());
                     }
                     break;
 

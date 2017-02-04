@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.traccar.BaseProtocol;
 import org.traccar.Context;
 import org.traccar.TrackerServer;
+import org.traccar.model.Command;
 
 import java.util.List;
 
@@ -30,11 +31,14 @@ public class XexunProtocol extends BaseProtocol {
 
     public XexunProtocol() {
         super("xexun");
+        setSupportedCommands(
+                Command.TYPE_ENGINE_STOP,
+                Command.TYPE_ENGINE_RESUME);
     }
 
     @Override
     public void initTrackerServers(List<TrackerServer> serverList) {
-        serverList.add(new TrackerServer(new ServerBootstrap(), this.getName()) {
+        serverList.add(new TrackerServer(new ServerBootstrap(), getName()) {
             @Override
             protected void addSpecificHandlers(ChannelPipeline pipeline) {
                 boolean full = Context.getConfig().getBoolean(getName() + ".extended");
@@ -43,8 +47,9 @@ public class XexunProtocol extends BaseProtocol {
                 } else {
                     pipeline.addLast("frameDecoder", new XexunFrameDecoder());
                 }
-                pipeline.addLast("stringDecoder", new StringDecoder());
                 pipeline.addLast("stringEncoder", new StringEncoder());
+                pipeline.addLast("stringDecoder", new StringDecoder());
+                pipeline.addLast("objectEncoder", new XexunProtocolEncoder());
                 pipeline.addLast("objectDecoder", new XexunProtocolDecoder(XexunProtocol.this, full));
             }
         });

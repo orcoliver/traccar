@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2014 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,8 +73,8 @@ public class RitiProtocolDecoder extends BaseProtocolDecoder {
         buf.readUnsignedShort();
         buf.readUnsignedShort();
 
-        position.set("distance", buf.readUnsignedInt());
-        position.set(Position.KEY_ODOMETER, buf.readUnsignedInt());
+        position.set(Position.KEY_DISTANCE, buf.readUnsignedInt());
+        position.set(Position.KEY_TRIP_ODOMETER, buf.readUnsignedInt());
 
         // Parse GPRMC
         int end = buf.indexOf(buf.readerIndex(), buf.writerIndex(), (byte) '*');

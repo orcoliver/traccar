@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2012 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,13 +37,13 @@ public class XexunProtocolDecoder extends BaseProtocolDecoder {
 
     private static final Pattern PATTERN_BASIC = new PatternBuilder()
             .expression("G[PN]RMC,")
-            .number("(dd)(dd)(dd).(d+),")        // time
+            .number("(?:(dd)(dd)(dd))?.(d+),")   // time
             .expression("([AV]),")               // validity
             .number("(d*?)(d?d.d+),([NS]),")     // latitude
             .number("(d*?)(d?d.d+),([EW])?,")    // longitude
             .number("(d+.?d*),")                 // speed
             .number("(d+.?d*)?,")                // course
-            .number("(dd)(dd)(dd),")             // date
+            .number("(?:(dd)(dd)(dd))?,")        // date
             .expression("[^*]*").text("*")
             .number("xx")                        // checksum
             .expression("\\r\\n").optional()
@@ -63,6 +63,23 @@ public class XexunProtocolDecoder extends BaseProtocolDecoder {
             .number("[FL]:(d+.d+)V")             // power
             .any()
             .compile();
+
+    private String decodeAlarm(String value) {
+        if (value != null) {
+            switch (value) {
+                case "help me!":
+                    return Position.ALARM_SOS;
+                case "low battery":
+                    return Position.ALARM_LOW_BATTERY;
+                case "move!":
+                case "moved!":
+                    return Position.ALARM_MOVEMENT;
+                default:
+                    break;
+            }
+        }
+        return null;
+    }
 
     @Override
     protected Object decode(
@@ -99,7 +116,7 @@ public class XexunProtocolDecoder extends BaseProtocolDecoder {
         position.setTime(dateBuilder.getDate());
 
         position.set("signal", parser.next());
-        position.set(Position.KEY_ALARM, parser.next());
+        position.set(Position.KEY_ALARM, decodeAlarm(parser.next()));
 
         DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
         if (deviceSession == null) {

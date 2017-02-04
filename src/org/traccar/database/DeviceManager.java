@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2016 - 2017 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,10 @@ import org.traccar.Config;
 import org.traccar.Context;
 import org.traccar.helper.Log;
 import org.traccar.model.Device;
+import org.traccar.model.DeviceTotalDistance;
 import org.traccar.model.Group;
 import org.traccar.model.Position;
+import org.traccar.model.Server;
 
 public class DeviceManager implements IdentityManager {
 
@@ -40,6 +42,7 @@ public class DeviceManager implements IdentityManager {
     private final Config config;
     private final DataManager dataManager;
     private final long dataRefreshDelay;
+    private boolean lookupGroupsAttribute;
 
     private Map<Long, Device> devicesById;
     private Map<String, Device> devicesByUniqueId;
@@ -54,6 +57,7 @@ public class DeviceManager implements IdentityManager {
         this.dataManager = dataManager;
         this.config = Context.getConfig();
         dataRefreshDelay = config.getLong("database.refreshDelay", DEFAULT_REFRESH_DELAY) * 1000;
+        lookupGroupsAttribute = config.getBoolean("deviceManager.lookupGroupsAttribute");
         if (dataManager != null) {
             try {
                 updateGroupCache(true);
@@ -156,6 +160,15 @@ public class DeviceManager implements IdentityManager {
         return devices;
     }
 
+    public Collection<Device> getManagedDevices(long userId) throws SQLException {
+        Collection<Device> devices = new ArrayList<>();
+        devices.addAll(getDevices(userId));
+        for (long managedUserId : Context.getPermissionsManager().getUserPermissions(userId)) {
+            devices.addAll(getDevices(managedUserId));
+        }
+        return devices;
+    }
+
     public void addDevice(Device device) throws SQLException {
         dataManager.addDevice(device);
 
@@ -191,7 +204,7 @@ public class DeviceManager implements IdentityManager {
 
     public boolean isLatestPosition(Position position) {
         Position lastPosition = getLastPosition(position.getDeviceId());
-        return lastPosition == null || position.getFixTime().compareTo(lastPosition.getFixTime()) > 0;
+        return lastPosition == null || position.getFixTime().compareTo(lastPosition.getFixTime()) >= 0;
     }
 
     public void updateLatestPosition(Position position) throws SQLException {
@@ -285,6 +298,15 @@ public class DeviceManager implements IdentityManager {
         return groups;
     }
 
+    public Collection<Group> getManagedGroups(long userId) throws SQLException {
+        Collection<Group> groups = new ArrayList<>();
+        groups.addAll(getGroups(userId));
+        for (long managedUserId : Context.getPermissionsManager().getUserPermissions(userId)) {
+            groups.addAll(getGroups(managedUserId));
+        }
+        return groups;
+    }
+
     private void checkGroupCycles(Group group) {
         Set<Long> groups = new HashSet<>();
         while (group != null) {
@@ -311,5 +333,91 @@ public class DeviceManager implements IdentityManager {
     public void removeGroup(long groupId) throws SQLException {
         dataManager.removeGroup(groupId);
         groupsById.remove(groupId);
+    }
+
+    public boolean lookupAttributeBoolean(
+            long deviceId, String attributeName, boolean defaultValue, boolean lookupConfig) {
+        String result = lookupAttribute(deviceId, attributeName, lookupConfig);
+        if (result != null) {
+            return Boolean.parseBoolean(result);
+        }
+        return defaultValue;
+    }
+
+    public String lookupAttributeString(
+            long deviceId, String attributeName, String defaultValue, boolean lookupConfig) {
+        String result = lookupAttribute(deviceId, attributeName, lookupConfig);
+        if (result != null) {
+            return result;
+        }
+        return defaultValue;
+    }
+
+    public int lookupAttributeInteger(long deviceId, String attributeName, int defaultValue, boolean lookupConfig) {
+        String result = lookupAttribute(deviceId, attributeName, lookupConfig);
+        if (result != null) {
+            return Integer.parseInt(result);
+        }
+        return defaultValue;
+    }
+
+    public long lookupAttributeLong(
+            long deviceId, String attributeName, long defaultValue, boolean lookupConfig) {
+        String result = lookupAttribute(deviceId, attributeName, lookupConfig);
+        if (result != null) {
+            return Long.parseLong(result);
+        }
+        return defaultValue;
+    }
+
+    public double lookupAttributeDouble(
+            long deviceId, String attributeName, double defaultValue, boolean lookupConfig) {
+        String result = lookupAttribute(deviceId, attributeName, lookupConfig);
+        if (result != null) {
+            return Double.parseDouble(result);
+        }
+        return defaultValue;
+    }
+
+    private String lookupAttribute(long deviceId, String attributeName, boolean lookupConfig) {
+        String result = null;
+        Device device = getDeviceById(deviceId);
+        if (device != null) {
+            result = device.getString(attributeName);
+            if (result == null && lookupGroupsAttribute) {
+                long groupId = device.getGroupId();
+                while (groupId != 0) {
+                    if (getGroupById(groupId) != null) {
+                        result = getGroupById(groupId).getString(attributeName);
+                        if (result != null) {
+                            break;
+                        }
+                        groupId = getGroupById(groupId).getGroupId();
+                    } else {
+                        groupId = 0;
+                    }
+                }
+            }
+            if (result == null) {
+                if (lookupConfig) {
+                    result = Context.getConfig().getString(attributeName);
+                } else {
+                    Server server = Context.getPermissionsManager().getServer();
+                    result = server.getString(attributeName);
+                }
+            }
+        }
+        return result;
+    }
+
+    public void resetTotalDistance(DeviceTotalDistance deviceTotalDistance) throws SQLException {
+        Position last = positions.get(deviceTotalDistance.getDeviceId());
+        if (last != null) {
+            last.getAttributes().put(Position.KEY_TOTAL_DISTANCE, deviceTotalDistance.getTotalDistance());
+            dataManager.addPosition(last);
+            updateLatestPosition(last);
+        } else {
+            throw new IllegalArgumentException();
+        }
     }
 }

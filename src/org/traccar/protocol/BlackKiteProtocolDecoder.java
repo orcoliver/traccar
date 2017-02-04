@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2016 Anton Tananaev (anton@traccar.org)
  * Copyright 2015 Vijay Kumar (vijaykumar@zilogic.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,7 +122,9 @@ public class BlackKiteProtocolDecoder extends BaseProtocolDecoder {
                 case TAG_STATUS:
                     int status = buf.readUnsignedShort();
                     position.set(Position.KEY_IGNITION, BitUtil.check(status, 9));
-                    position.set(Position.KEY_ALARM, BitUtil.check(status, 15));
+                    if (BitUtil.check(status, 15)) {
+                        position.set(Position.KEY_ALARM, Position.ALARM_GENERAL);
+                    }
                     position.set(Position.KEY_POWER, BitUtil.check(status, 2));
                     break;
 

@@ -10,6 +10,33 @@ public class Gps103ProtocolDecoderTest extends ProtocolTest {
 
         Gps103ProtocolDecoder decoder = new Gps103ProtocolDecoder(new Gps103Protocol());
 
+        verifyPosition(decoder, text(
+                "imei:353451044508750,DTC,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,30.1,,1,0,10.5%,P0021,;"));
+
+        verifyPosition(decoder, text(
+                "imei:353451044508750,oil1,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,,,51.6,41.7,;"));
+
+        verifyPosition(decoder, text(
+                "imei:353451044508750,oil2,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,,,51.6,41.7,;"));
+
+        verifyPosition(decoder, text(
+                "imei:353451044508750,oil 51.67,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
+
+        verifyPosition(decoder, text(
+                "imei:353451044508750,T:+28.0,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
+
+        verifyPosition(decoder, text(
+                "imei:353451044508750,bonnet alarm,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
+
+        verifyPosition(decoder, text(
+                "imei:353451044508750,footbrake alarm,0809231929,,F,055403.000,A,2233.1870,N,11354.3067,E,0.00,,;"));
+
+        verifyPosition(decoder, text(
+                "imei:862106021237716,ac alarm,1611291645,,F,204457.000,A,1010.2783,N,06441.0274,W,0.00,,;"));
+
+        verifyAttributes(decoder, text(
+                "imei:359710049057798,OBD,161003192752,1785,,,0,54,96.47%,75,20.00%,1892,0.00,P0134,P0571,,;"));
+
         verifyAttributes(decoder, text(
                 "imei:359710049090138,OBD,160629022949,51442,0.00,15.88,5632,122,40.39%,95,0.00%,2101,13.80,,,,;"));
 
@@ -37,13 +64,13 @@ public class Gps103ProtocolDecoderTest extends ProtocolTest {
         verifyPosition(decoder, text(
                 "imei:868683020235846,rfid,160202091347,49121185,F,011344.000,A,0447.7273,N,07538.9934,W,0.00,0,,0,0,0.00%,,"));
 
-        verifyAttributes(decoder, text(
+        verifyNotNull(decoder, text(
                 "imei:359710049075097,help me,,,L,,,113b,,558f,,,,,0,0,,,"));
 
-        verifyAttributes(decoder, text(
+        verifyNotNull(decoder, text(
                 "imei:359710041100000,tracker,000000000,,L,,,fa8,,c9af,,,,,0,0,0.00%,,"));
 
-        verifyAttributes(decoder, text(
+        verifyNotNull(decoder, text(
                 "imei:863070016871385,tracker,0000000119,,L,,,0FB6,,CB5D,,,"));
 
         verifyPosition(decoder, text(

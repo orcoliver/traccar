@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,9 +52,9 @@ public class GpsGateProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+),")                     // imei
             .expression("[^,]*,")                // command
             .expression("[^,]*,")
-            .number("(dd)(dd.d+),")              // latitude
+            .number("(d+)(dd.d+),")              // latitude
             .expression("([NS]),")
-            .number("(ddd)(dd.d+),")             // longitude
+            .number("(d+)(dd.d+),")              // longitude
             .expression("([EW]),")
             .number("(d+.?d*),")                 // altitude
             .number("(d+.?d*),")                 // speed

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,8 @@ public abstract class ExtendedObjectDecoder implements ChannelUpstreamHandler {
         if (Context.getConfig().getBoolean("database.saveOriginal") && decodedMessage instanceof Position) {
             Position position = (Position) decodedMessage;
             if (originalMessage instanceof ChannelBuffer) {
-                position.set(Position.KEY_ORIGINAL, ChannelBuffers.hexDump((ChannelBuffer) originalMessage));
+                ChannelBuffer buf = (ChannelBuffer) originalMessage;
+                position.set(Position.KEY_ORIGINAL, ChannelBuffers.hexDump(buf, 0, buf.writerIndex()));
             } else if (originalMessage instanceof String) {
                 position.set(Position.KEY_ORIGINAL, DatatypeConverter.printHexBinary(
                                 ((String) originalMessage).getBytes(StandardCharsets.US_ASCII)));
@@ -55,7 +56,7 @@ public abstract class ExtendedObjectDecoder implements ChannelUpstreamHandler {
         MessageEvent e = (MessageEvent) evt;
         Object originalMessage = e.getMessage();
         Object decodedMessage = decode(e.getChannel(), e.getRemoteAddress(), originalMessage);
-        onMessageEvent(e.getChannel(), e.getRemoteAddress(), originalMessage); // call after decode
+        onMessageEvent(e.getChannel(), e.getRemoteAddress(), originalMessage, decodedMessage);
         if (originalMessage == decodedMessage) {
             ctx.sendUpstream(evt);
         } else {
@@ -76,7 +77,8 @@ public abstract class ExtendedObjectDecoder implements ChannelUpstreamHandler {
         }
     }
 
-    protected void onMessageEvent(Channel channel, SocketAddress remoteAddress, Object msg) {
+    protected void onMessageEvent(
+            Channel channel, SocketAddress remoteAddress, Object originalMessage, Object decodedMessage) {
     }
 
     protected Object handleEmptyMessage(Channel channel, SocketAddress remoteAddress, Object msg) {

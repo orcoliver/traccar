@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
+import org.traccar.model.CellTower;
+import org.traccar.model.Network;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -138,9 +140,11 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
             .number("(dd)")                      // external power
             .number("(dddd)")                    // adc 1
             .groupBegin()
+            .groupBegin()
             .number("(dddd)")                    // adc 2
             .number("(dddd)")                    // adc 3
             .number("(dddd)")                    // adc 4
+            .groupEnd("?")
             .number("(dddd)")                    // temperature 1
             .number("(dddd)")                    // temperature 2
             .groupEnd("?")
@@ -158,6 +162,23 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
             .number("xx")                        // checksum
             .any()
             .compile();
+
+    private String decodeAlarm(Short value) {
+        switch (value) {
+            case 0x01:
+                return Position.ALARM_SOS;
+            case 0x10:
+                return Position.ALARM_LOW_BATTERY;
+            case 0x11:
+                return Position.ALARM_OVERSPEED;
+            case 0x42:
+                return Position.ALARM_GEOFENCE_EXIT;
+            case 0x43:
+                return Position.ALARM_GEOFENCE_ENTER;
+            default:
+                return null;
+        }
+    }
 
     @Override
     protected Object decode(
@@ -193,9 +214,9 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
         position.setDeviceId(deviceSession.getDeviceId());
 
         if (pattern == PATTERN1 || pattern == PATTERN2) {
-
-            position.set(Position.KEY_ALARM, parser.next());
-
+            if (parser.hasNext()) {
+                position.set(Position.KEY_ALARM, decodeAlarm(Short.parseShort(parser.next(), 16)));
+            }
             DateBuilder dateBuilder = new DateBuilder();
             int year = 0;
             if (pattern == PATTERN2) {
@@ -230,17 +251,16 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
             int lac = parser.nextInt(16);
             int cid = parser.nextInt(16);
             if (lac != 0 && cid != 0) {
-                position.set(Position.KEY_LAC, lac);
-                position.set(Position.KEY_CID, cid);
+                position.setNetwork(new Network(CellTower.fromLacCid(lac, cid)));
             }
 
             position.set(Position.PREFIX_TEMP + 1, parser.next());
-            position.set(Position.KEY_ODOMETER, parser.next());
+            position.set(Position.KEY_ODOMETER, parser.nextDouble() * 1000);
 
         } else if (pattern == PATTERN3) {
-
-            position.set(Position.KEY_ALARM, parser.next());
-
+            if (parser.hasNext()) {
+                position.set(Position.KEY_ALARM, decodeAlarm(Short.parseShort(parser.next(), 16)));
+            }
             DateBuilder dateBuilder = new DateBuilder()
                     .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
                     .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
@@ -253,8 +273,9 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.PREFIX_ADC + 2, parser.next());
             position.set(Position.PREFIX_TEMP + 1, parser.next());
             position.set(Position.PREFIX_TEMP + 2, parser.next());
-            position.set(Position.KEY_LAC, parser.nextInt(16));
-            position.set(Position.KEY_CID, parser.nextInt(16));
+
+            position.setNetwork(new Network(
+                    CellTower.fromLacCid(parser.nextInt(16), parser.nextInt(16))));
 
             position.setValid(parser.next().equals("A"));
             position.set(Position.KEY_SATELLITES, parser.next());
@@ -288,27 +309,26 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.PREFIX_TEMP + 1, parser.next());
             position.set(Position.PREFIX_TEMP + 2, parser.next());
 
-            position.set(Position.KEY_LAC, parser.nextInt(16));
-            position.set(Position.KEY_CID, parser.nextInt(16));
+            position.setNetwork(new Network(
+                    CellTower.fromLacCid(parser.nextInt(16), parser.nextInt(16))));
+
             position.set(Position.KEY_SATELLITES, parser.nextInt());
-            position.set(Position.KEY_GSM, parser.nextInt());
+            position.set(Position.KEY_RSSI, parser.nextInt());
 
             position.setCourse(parser.nextDouble());
             position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
 
             position.set(Position.KEY_HDOP, parser.nextDouble());
-            position.set(Position.KEY_ODOMETER, parser.nextInt());
+            position.set(Position.KEY_ODOMETER, parser.nextInt() * 1000);
 
             position.setValid(true);
             position.setLatitude(parser.nextCoordinate());
             position.setLongitude(parser.nextCoordinate());
 
         }
-
         if (channel != null) {
             channel.write("ACK OK\r\n");
         }
-
         return position;
     }
 

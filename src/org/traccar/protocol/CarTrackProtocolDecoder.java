@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2014 - 2015 Anton Tananaev (anton@traccar.org)
  * Copyright 2014 Rohit
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,7 +99,7 @@ public class CarTrackProtocolDecoder extends BaseProtocolDecoder {
         odometer = odometer.replace("?", "F");
         position.set(Position.KEY_ODOMETER, Integer.parseInt(odometer, 16));
 
-        position.set(Position.KEY_ALARM, parser.next());
+        parser.next(); // there is no meaningful alarms
         position.set(Position.PREFIX_ADC + 1, parser.next());
 
         return position;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,20 +25,25 @@ public final class PatternUtil {
     }
 
     public static class MatchResult {
-        private String pattern;
-        private String matched;
-        private String remaining;
+        private String patternMatch;
+        private String patternTail;
+        private String stringMatch;
+        private String stringTail;
 
-        public String getPattern() {
-            return this.pattern;
+        public String getPatternMatch() {
+            return patternMatch;
         }
 
-        public String getMatched() {
-            return  this.matched;
+        public String getPatternTail() {
+            return patternTail;
         }
 
-        public String getRemaining() {
-            return this.remaining;
+        public String getStringMatch() {
+            return stringMatch;
+        }
+
+        public String getStringTail() {
+            return stringTail;
         }
     }
 
@@ -50,9 +55,10 @@ public final class PatternUtil {
             try {
                 Matcher matcher = Pattern.compile("(" + pattern.substring(0, i) + ").*").matcher(input);
                 if (matcher.matches()) {
-                    result.pattern = pattern.substring(0, i);
-                    result.matched = matcher.group(1);
-                    result.remaining = input.substring(matcher.group(1).length());
+                    result.patternMatch = pattern.substring(0, i);
+                    result.patternTail = pattern.substring(i);
+                    result.stringMatch = matcher.group(1);
+                    result.stringTail = input.substring(matcher.group(1).length());
                 }
             } catch (PatternSyntaxException error) {
                 Log.warning(error);

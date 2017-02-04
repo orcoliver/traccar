@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,14 +93,16 @@ public class IdplProtocolDecoder extends BaseProtocolDecoder {
         position.setCourse(parser.nextDouble());
 
         position.set(Position.KEY_SATELLITES, parser.nextInt());
-        position.set(Position.KEY_GSM, parser.nextInt());
+        position.set(Position.KEY_RSSI, parser.nextInt());
         parser.next(); // vehicle status
         position.set(Position.KEY_POWER, parser.nextInt());
         position.set(Position.KEY_BATTERY, parser.nextDouble());
-        position.set(Position.KEY_ALARM, parser.nextInt());
+        if (parser.nextInt() == 1) {
+            position.set(Position.KEY_ALARM, Position.ALARM_SOS);
+        }
         parser.nextInt(); // body tamper
         parser.nextInt(); // ac status
-        position.set(Position.KEY_IGNITION, parser.nextInt());
+        position.set(Position.KEY_IGNITION, parser.nextInt() == 1);
         position.set(Position.KEY_OUTPUT, parser.nextInt());
         position.set(Position.PREFIX_ADC + 1, parser.nextInt());
         position.set(Position.PREFIX_ADC + 2, parser.nextInt());

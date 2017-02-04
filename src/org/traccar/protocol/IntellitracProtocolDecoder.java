@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2015 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,12 +109,12 @@ public class IntellitracProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_RPM, parser.next());
         position.set("coolant", parser.next());
         position.set(Position.KEY_FUEL, parser.next());
-        position.set("consumption", parser.next());
+        position.set(Position.KEY_FUEL_CONSUMPTION, parser.next());
         position.set(Position.PREFIX_TEMP + 1, parser.next());
         position.set(Position.KEY_CHARGE, parser.next());
         position.set("tpl", parser.next());
         position.set("axle", parser.next());
-        position.set(Position.KEY_ODOMETER, parser.next());
+        position.set(Position.KEY_OBD_ODOMETER, parser.next());
 
         return position;
     }

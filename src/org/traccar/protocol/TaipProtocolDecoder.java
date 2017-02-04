@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2015 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ public class TaipProtocolDecoder extends BaseProtocolDecoder {
                             break;
 
                         case "vo":
-                            position.set(Position.KEY_ODOMETER, value);
+                            position.set(Position.KEY_ODOMETER, Long.parseLong(value));
                             break;
 
                         default:

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2014 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
+import org.traccar.helper.UnitsConverter;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -76,7 +77,10 @@ public class TelicProtocolDecoder extends BaseProtocolDecoder {
         }
         position.setDeviceId(deviceSession.getDeviceId());
 
-        position.set(Position.KEY_TYPE, parser.next());
+        int event = parser.nextInt();
+        position.set(Position.KEY_TYPE, event);
+
+        position.set(Position.KEY_ALARM, decodeAlarm(event));
 
         DateBuilder dateBuilder = new DateBuilder()
                 .setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
@@ -94,7 +98,7 @@ public class TelicProtocolDecoder extends BaseProtocolDecoder {
         }
 
         position.setValid(parser.nextInt() != 1);
-        position.setSpeed(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
         position.setCourse(parser.nextDouble());
 
         position.set(Position.KEY_SATELLITES, parser.next());
@@ -104,4 +108,25 @@ public class TelicProtocolDecoder extends BaseProtocolDecoder {
         return position;
     }
 
+    private String decodeAlarm(int eventId) {
+
+        switch (eventId) {
+            case 1:
+                return Position.ALARM_POWER_ON;
+            case 2:
+                return Position.ALARM_SOS;
+            case 5:
+                return Position.ALARM_POWER_OFF;
+            case 7:
+                return Position.ALARM_GEOFENCE_ENTER;
+            case 8:
+                return Position.ALARM_GEOFENCE_EXIT;
+            case 22:
+                return Position.ALARM_LOW_BATTERY;
+            case 25:
+                return Position.ALARM_MOVEMENT;
+            default:
+                return null;
+        }
+    }
 }

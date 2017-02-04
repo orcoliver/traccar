@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2015 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +105,7 @@ public class EasyTrackProtocolDecoder extends BaseProtocolDecoder {
         position.set("signal", parser.next());
         position.set(Position.KEY_POWER, parser.nextDouble());
         position.set("oil", parser.nextInt(16));
-        position.set(Position.KEY_ODOMETER, parser.nextInt(16));
+        position.set(Position.KEY_ODOMETER, parser.nextInt(16) * 100);
 
         position.setAltitude(parser.nextDouble());
 

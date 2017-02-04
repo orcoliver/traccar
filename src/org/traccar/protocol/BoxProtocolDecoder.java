@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2014 - 2015 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ public class BoxProtocolDecoder extends BaseProtocolDecoder {
             position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
             position.setCourse(parser.nextDouble());
 
-            position.set(Position.KEY_ODOMETER, parser.next());
+            position.set(Position.KEY_DISTANCE, parser.nextDouble() * 1000);
             position.set(Position.KEY_EVENT, parser.next());
 
             int status = parser.nextInt();

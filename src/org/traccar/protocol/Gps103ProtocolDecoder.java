@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2012 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
+import org.traccar.model.CellTower;
+import org.traccar.model.Network;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -87,7 +89,7 @@ public class Gps103ProtocolDecoder extends BaseProtocolDecoder {
             .number("(dd)(dd)(dd),")             // time
             .number("(d+),")                     // odometer
             .number("(d+.d+)?,")                 // fuel instant
-            .number("(?:d+.d+)?,")               // fuel average
+            .number("(d+.d+)?,")                 // fuel average
             .number("(d+),")                     // hours
             .number("(d+),")                     // speed
             .number("d+.?d*%,")                  // power load
@@ -95,12 +97,51 @@ public class Gps103ProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+.?d*%),")                // throttle
             .number("(d+),")                     // rpm
             .number("(d+.d+),")                  // battery
-            .number("[^,]*,")                    // dtc 1
-            .number("[^,]*,")                    // dtc 2
-            .number("[^,]*,")                    // dtc 3
-            .number("[^,]*")                     // dtc 4
+            .number("([^;]*)")                   // dtcs
             .any()
             .compile();
+
+    private String decodeAlarm(String value) {
+        if (value.startsWith("T:")) {
+            return Position.ALARM_TEMPERATURE;
+        } else if (value.startsWith("oil")) {
+            return Position.ALARM_OIL_LEAK;
+        }
+        switch (value) {
+            case "tracker":
+                return null;
+            case "help me":
+                return Position.ALARM_SOS;
+            case "low battery":
+                return Position.ALARM_LOW_BATTERY;
+            case "stockade":
+                return Position.ALARM_GEOFENCE;
+            case "move":
+                return Position.ALARM_MOVEMENT;
+            case "speed":
+                return Position.ALARM_OVERSPEED;
+            case "acc on":
+                return Position.ALARM_POWER_ON;
+            case "acc off":
+                return Position.ALARM_POWER_OFF;
+            case "door alarm":
+                return Position.ALARM_DOOR;
+            case "ac alarm":
+                return Position.ALARM_POWER_CUT;
+            case "accident alarm":
+                return Position.ALARM_ACCIDENT;
+            case "sensor alarm":
+                return Position.ALARM_SHOCK;
+            case "bonnet alarm":
+                return Position.ALARM_BONNET;
+            case "footbrake alarm":
+                return Position.ALARM_FOOT_BRAKE;
+            case "DTC":
+                return Position.ALARM_FAULT;
+            default:
+                return null;
+        }
+    }
 
     @Override
     protected Object decode(
@@ -147,8 +188,8 @@ public class Gps103ProtocolDecoder extends BaseProtocolDecoder {
 
             getLastLocation(position, null);
 
-            position.set(Position.KEY_LAC, parser.nextInt(16));
-            position.set(Position.KEY_CID, parser.nextInt(16));
+            position.setNetwork(new Network(
+                    CellTower.fromLacCid(parser.nextInt(16), parser.nextInt(16))));
 
             return position;
 
@@ -170,13 +211,15 @@ public class Gps103ProtocolDecoder extends BaseProtocolDecoder {
             getLastLocation(position, dateBuilder.getDate());
 
             position.set(Position.KEY_ODOMETER, parser.nextInt());
-            position.set(Position.KEY_FUEL, parser.next());
+            parser.next(); // instant fuel consumption
+            position.set(Position.KEY_FUEL_CONSUMPTION, parser.next());
             position.set(Position.KEY_HOURS, parser.next());
             position.set(Position.KEY_OBD_SPEED, parser.next());
             position.set(Position.PREFIX_TEMP + 1, parser.next());
             position.set(Position.KEY_THROTTLE, parser.next());
             position.set(Position.KEY_RPM, parser.next());
             position.set(Position.KEY_BATTERY, parser.next());
+            position.set(Position.KEY_DTCS, parser.next().replace(',', ' ').trim());
 
             return position;
 
@@ -195,9 +238,19 @@ public class Gps103ProtocolDecoder extends BaseProtocolDecoder {
         position.setDeviceId(deviceSession.getDeviceId());
 
         String alarm = parser.next();
-        position.set(Position.KEY_ALARM, alarm);
-        if (channel != null && alarm.equals("help me")) {
-            channel.write("**,imei:" + imei + ",E;", remoteAddress);
+        position.set(Position.KEY_ALARM, decodeAlarm(alarm));
+        if (alarm.equals("help me")) {
+            if (channel != null) {
+                channel.write("**,imei:" + imei + ",E;", remoteAddress);
+            }
+        } else if (alarm.equals("acc on")) {
+            position.set(Position.KEY_IGNITION, true);
+        } else if (alarm.equals("acc off")) {
+            position.set(Position.KEY_IGNITION, false);
+        } else if (alarm.startsWith("T:")) {
+            position.set(Position.PREFIX_TEMP + 1, alarm.substring(2));
+        } else if (alarm.startsWith("oil ")) {
+            position.set("oil", alarm.substring(4));
         }
 
         DateBuilder dateBuilder = new DateBuilder()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2015 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import org.traccar.helper.BcdUtil;
 import org.traccar.helper.BitUtil;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.UnitsConverter;
+import org.traccar.model.CellTower;
+import org.traccar.model.Network;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
@@ -58,6 +60,25 @@ public class T800xProtocolDecoder extends BaseProtocolDecoder {
             response.writeBytes(imei);
             channel.write(response);
         }
+    }
+
+    private String decodeAlarm(short value) {
+        switch (value) {
+            case 3:
+                return Position.ALARM_SOS;
+            case 4:
+                return Position.ALARM_OVERSPEED;
+            case 5:
+                return Position.ALARM_GEOFENCE_ENTER;
+            case 6:
+                return Position.ALARM_GEOFENCE_EXIT;
+            case 8:
+            case 10:
+                return Position.ALARM_VIBRATION;
+            default:
+                break;
+        }
+        return null;
     }
 
     @Override
@@ -111,7 +132,7 @@ public class T800xProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.PREFIX_ADC + 1, buf.readUnsignedShort());
             position.set(Position.PREFIX_ADC + 2, buf.readUnsignedShort());
 
-            position.set(Position.KEY_ALARM, buf.readUnsignedByte());
+            position.set(Position.KEY_ALARM, decodeAlarm(buf.readUnsignedByte()));
 
             buf.readUnsignedByte(); // reserved
 
@@ -150,10 +171,9 @@ public class T800xProtocolDecoder extends BaseProtocolDecoder {
                 buf.readBytes(array);
                 ChannelBuffer swapped = ChannelBuffers.wrappedBuffer(ByteOrder.LITTLE_ENDIAN, array);
 
-                position.set(Position.KEY_MCC, swapped.readUnsignedShort());
-                position.set(Position.KEY_MNC, swapped.readUnsignedShort());
-                position.set(Position.KEY_LAC, swapped.readUnsignedShort());
-                position.set(Position.KEY_CID, swapped.readUnsignedShort());
+                position.setNetwork(new Network(CellTower.from(
+                        swapped.readUnsignedShort(), swapped.readUnsignedShort(),
+                        swapped.readUnsignedShort(), swapped.readUnsignedShort())));
 
                 // two more cell towers
 

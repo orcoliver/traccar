@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,21 @@
  */
 package org.traccar.events;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 
 import org.traccar.BaseEventHandler;
 import org.traccar.Context;
-import org.traccar.helper.Log;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.model.Position;
 
 public class MotionEventHandler extends BaseEventHandler {
 
-    private static final double SPEED_THRESHOLD = 0.01;
-    private int suppressRepeated;
+    private double speedThreshold;
 
     public MotionEventHandler() {
-        suppressRepeated = Context.getConfig().getInteger("event.suppressRepeated", 60);
+        speedThreshold = Context.getConfig().getDouble("event.motion.speedThreshold", 0.01);
     }
 
     @Override
@@ -42,38 +39,24 @@ public class MotionEventHandler extends BaseEventHandler {
         if (device == null) {
             return null;
         }
-        if (!Context.getDeviceManager().isLatestPosition(position) || !position.getValid()) {
+        if (!Context.getIdentityManager().isLatestPosition(position) || !position.getValid()) {
             return null;
         }
 
-        Collection<Event> result = null;
         double speed = position.getSpeed();
         double oldSpeed = 0;
-        Position lastPosition = Context.getDeviceManager().getLastPosition(position.getDeviceId());
+        Position lastPosition = Context.getIdentityManager().getLastPosition(position.getDeviceId());
         if (lastPosition != null) {
             oldSpeed = lastPosition.getSpeed();
         }
-        try {
-            if (speed > SPEED_THRESHOLD && oldSpeed <= SPEED_THRESHOLD) {
-                result = new ArrayList<>();
-                result.add(new Event(Event.TYPE_DEVICE_MOVING, position.getDeviceId(), position.getId()));
-            } else if (speed <= SPEED_THRESHOLD && oldSpeed > SPEED_THRESHOLD) {
-                result = new ArrayList<>();
-                result.add(new Event(Event.TYPE_DEVICE_STOPPED, position.getDeviceId(), position.getId()));
-            }
-
-            if (result != null && !result.isEmpty()) {
-                for (Event event : result) {
-                    if (!Context.getDataManager().getLastEvents(position.getDeviceId(),
-                            event.getType(), suppressRepeated).isEmpty()) {
-                        event = null;
-                    }
-                }
-            }
-        } catch (SQLException error) {
-            Log.warning(error);
+        if (speed > speedThreshold && oldSpeed <= speedThreshold) {
+            return Collections.singleton(
+                    new Event(Event.TYPE_DEVICE_MOVING, position.getDeviceId(), position.getId()));
+        } else if (speed <= speedThreshold && oldSpeed > speedThreshold) {
+            return Collections.singleton(
+                    new Event(Event.TYPE_DEVICE_STOPPED, position.getDeviceId(), position.getId()));
         }
-        return result;
+        return null;
     }
 
 }

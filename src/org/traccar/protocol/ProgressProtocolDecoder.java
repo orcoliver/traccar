@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2014 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2012 - 2014 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ public class ProgressProtocolDecoder extends BaseProtocolDecoder {
                     position.set(Position.KEY_ARCHIVE, true);
                     int subtype = buf.readUnsignedShort();
                     if (subtype == MSG_ALARM) {
-                        position.set(Position.KEY_ALARM, true);
+                        position.set(Position.KEY_ALARM, Position.ALARM_GENERAL);
                     }
                     if (buf.readUnsignedShort() > buf.readableBytes()) {
                         lastIndex += 1;
@@ -127,7 +127,7 @@ public class ProgressProtocolDecoder extends BaseProtocolDecoder {
                 position.setValid(satellites >= 3);
                 position.set(Position.KEY_SATELLITES, satellites);
 
-                position.set(Position.KEY_GSM, buf.readUnsignedByte());
+                position.set(Position.KEY_RSSI, buf.readUnsignedByte());
                 position.set(Position.KEY_ODOMETER, buf.readUnsignedInt());
 
                 long extraFlags = buf.readLong();

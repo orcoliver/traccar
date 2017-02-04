@@ -10,6 +10,7 @@ id = '123456789012345'
 server = 'localhost:5055'
 period = 1
 step = 0.001
+device_speed = 40
 
 waypoints = [
     (40.722412, -74.006288),
@@ -32,12 +33,16 @@ for i in range(0, len(waypoints)):
         lon = lon1 + (lon2 - lon1) * j / count
         points.append((lat, lon))
 
-def send(conn, lat, lon, course, alarm):
-    params = (('id', id), ('timestamp', int(time.time())), ('lat', lat), ('lon', lon), ('bearing', course))
+def send(conn, lat, lon, course, speed, alarm, ignition, accuracy):
+    params = (('id', id), ('timestamp', int(time.time())), ('lat', lat), ('lon', lon), ('bearing', course), ('speed', speed))
     if alarm:
         params = params + (('alarm', 'sos'),)
+    if ignition:
+        params = params + (('ignition', 'true'),)
+    if accuracy:
+        params = params + (('accuracy', accuracy),)
     conn.request('GET', '?' + urllib.urlencode(params))
-    conn.getresponse()
+    conn.getresponse().read()
 
 def course(lat1, lon1, lat2, lon2):
     lat1 = lat1 * math.pi / 180
@@ -55,7 +60,10 @@ conn = httplib.HTTPConnection(server)
 while True:
     (lat1, lon1) = points[index % len(points)]
     (lat2, lon2) = points[(index + 1) % len(points)]
-    alarm = ((index % 10) == 0)
-    send(conn, lat1, lon1, course(lat1, lon1, lat2, lon2), alarm)
+    speed = device_speed if (index % len(points)) != 0 else 0
+    alarm = (index % 10) == 0
+    ignition = (index % len(points)) != 0
+    accuracy = 100 if (index % 10) == 0 else 0
+    send(conn, lat1, lon1, course(lat1, lon1, lat2, lon2), speed, alarm, ignition, accuracy)
     time.sleep(period)
     index += 1

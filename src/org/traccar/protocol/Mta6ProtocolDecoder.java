@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,11 +155,12 @@ public class Mta6ProtocolDecoder extends BaseProtocolDecoder {
                 }
 
                 if (BitUtil.check(flags, 3)) {
-                    position.set(Position.KEY_ODOMETER, buf.readUnsignedShort());
+                    position.set(Position.KEY_ODOMETER, buf.readUnsignedShort() * 1000);
                 }
 
                 if (BitUtil.check(flags, 4)) {
-                    position.set(Position.KEY_FUEL, buf.readUnsignedInt() + "|" + buf.readUnsignedInt());
+                    position.set(Position.KEY_FUEL_CONSUMPTION + "Accumulator1", buf.readUnsignedInt());
+                    position.set(Position.KEY_FUEL_CONSUMPTION + "Accumulator2", buf.readUnsignedInt());
                     position.set("hours1", buf.readUnsignedShort());
                     position.set("hours2", buf.readUnsignedShort());
                 }
@@ -183,7 +184,7 @@ public class Mta6ProtocolDecoder extends BaseProtocolDecoder {
                     position.set(Position.KEY_POWER, buf.readUnsignedShort() & 0x03ff);
                     buf.readByte(); // microcontroller temperature
 
-                    position.set(Position.KEY_GSM, (buf.getUnsignedByte(buf.readerIndex()) >> 4) & 0x07);
+                    position.set(Position.KEY_RSSI, (buf.getUnsignedByte(buf.readerIndex()) >> 4) & 0x07);
 
                     int satellites = buf.readUnsignedByte() & 0x0f;
                     position.setValid(satellites >= 3);
@@ -231,7 +232,7 @@ public class Mta6ProtocolDecoder extends BaseProtocolDecoder {
         }
 
         if (BitUtil.check(flags, 1)) {
-            new FloatReader().readFloat(buf); // fuel consumtion
+            position.set(Position.KEY_FUEL_CONSUMPTION, new FloatReader().readFloat(buf));
             position.set("hours", new FloatReader().readFloat(buf));
             position.set("tank", buf.readUnsignedByte() * 0.4);
         }
@@ -262,7 +263,7 @@ public class Mta6ProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.KEY_POWER, buf.readUnsignedShort() & 0x03ff);
             buf.readByte(); // microcontroller temperature
 
-            position.set(Position.KEY_GSM, buf.getUnsignedByte(buf.readerIndex()) >> 5);
+            position.set(Position.KEY_RSSI, buf.getUnsignedByte(buf.readerIndex()) >> 5);
 
             int satellites = buf.readUnsignedByte() & 0x1f;
             position.setValid(satellites >= 3);

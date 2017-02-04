@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2015 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2013 - 2015 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ public class SuntechProtocolDecoder extends BaseProtocolDecoder {
         if (parser.hasNext()) {
             String type = parser.next();
             if (type.equals("Alert") || type.equals("Emergency")) {
-                position.set(Position.KEY_ALARM, true);
+                position.set(Position.KEY_ALARM, Position.ALARM_GENERAL);
             }
         }
 

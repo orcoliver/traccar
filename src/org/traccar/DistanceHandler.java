@@ -1,6 +1,6 @@
 /*
  * Copyright 2015 Amila Silva
- * Copyright 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,23 +34,28 @@ public class DistanceHandler extends BaseDataHandler {
     public Position calculateDistance(Position position) {
 
         double distance = 0.0;
+        double totalDistance = 0.0;
 
         Position last = getLastPosition(position.getDeviceId());
         if (last != null) {
-            if (last.getAttributes().containsKey(Position.KEY_DISTANCE)) {
-                distance = ((Number) last.getAttributes().get(Position.KEY_DISTANCE)).doubleValue();
-            }
+            totalDistance = last.getDouble(Position.KEY_TOTAL_DISTANCE);
 
-            if (position.getValid()) {
-                distance += DistanceCalculator.distance(
+            if (!position.getAttributes().containsKey(Position.KEY_DISTANCE)) {
+                distance = DistanceCalculator.distance(
                         position.getLatitude(), position.getLongitude(),
                         last.getLatitude(), last.getLongitude());
 
                 distance = BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+            } else {
+                distance = position.getDouble(Position.KEY_DISTANCE);
             }
         }
+        if (!position.getAttributes().containsKey(Position.KEY_DISTANCE)) {
+            position.set(Position.KEY_DISTANCE, distance);
+        }
+        totalDistance = BigDecimal.valueOf(totalDistance + distance).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
+        position.set(Position.KEY_TOTAL_DISTANCE, totalDistance);
 
-        position.set(Position.KEY_DISTANCE, distance);
         return position;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2016 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2012 - 2016 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,36 @@ import org.traccar.model.Position;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.sql.SQLException;
 
 public abstract class BaseProtocolDecoder extends ExtendedObjectDecoder {
 
     private final Protocol protocol;
+
+    public long addUnknownDevice(String uniqueId) {
+        Device device = new Device();
+        device.setName(uniqueId);
+        device.setUniqueId(uniqueId);
+        device.setCategory(Context.getConfig().getString("database.registerUnknown.defaultCategory"));
+
+        long defaultGroupId = Context.getConfig().getLong("database.registerUnknown.defaultGroupId");
+        if (defaultGroupId != 0) {
+            device.setGroupId(defaultGroupId);
+        }
+
+        try {
+            Context.getDeviceManager().addDevice(device);
+            Log.info("Automatically registered device " + uniqueId);
+            return device.getId();
+        } catch (SQLException e) {
+            Log.warning(e);
+            return 0;
+        }
+    }
 
     public String getProtocolName() {
         return protocol.getName();
@@ -55,6 +78,10 @@ public abstract class BaseProtocolDecoder extends ExtendedObjectDecoder {
                 Log.warning(e);
             }
             if (deviceId == 0) {
+                if (Context.getConfig().getBoolean("database.registerUnknown")) {
+                    return addUnknownDevice(uniqueIds[0]);
+                }
+
                 StringBuilder message = new StringBuilder("Unknown device -");
                 for (String uniqueId : uniqueIds) {
                     message.append(" ").append(uniqueId);
@@ -69,6 +96,17 @@ public abstract class BaseProtocolDecoder extends ExtendedObjectDecoder {
     }
 
     public DeviceSession getDeviceSession(Channel channel, SocketAddress remoteAddress, String... uniqueIds) {
+        if (Context.getConfig().getBoolean("decoder.ignoreSessionCache")) {
+            long deviceId = findDeviceId(remoteAddress, uniqueIds);
+            if (deviceId != 0) {
+                if (Context.getConnectionManager() != null) {
+                    Context.getConnectionManager().addActiveDevice(deviceId, protocol, channel, remoteAddress);
+                }
+                return new DeviceSession(deviceId);
+            } else {
+                return null;
+            }
+        }
         if (channel instanceof DatagramChannel) {
             long deviceId = findDeviceId(remoteAddress, uniqueIds);
             DeviceSession deviceSession = addressDeviceSessions.get(remoteAddress);
@@ -128,10 +166,31 @@ public abstract class BaseProtocolDecoder extends ExtendedObjectDecoder {
     }
 
     @Override
-    protected void onMessageEvent(Channel channel, SocketAddress remoteAddress, Object msg) {
-        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress);
-        if (deviceSession != null) {
-            Context.getConnectionManager().updateDevice(deviceSession.getDeviceId(), Device.STATUS_ONLINE, new Date());
+    protected void onMessageEvent(
+            Channel channel, SocketAddress remoteAddress, Object originalMessage, Object decodedMessage) {
+        if (Context.getStatisticsManager() != null) {
+            Context.getStatisticsManager().registerMessageReceived();
+        }
+        Position position = null;
+        if (decodedMessage != null) {
+            if (decodedMessage instanceof Position) {
+                position = (Position) decodedMessage;
+            } else if (decodedMessage instanceof Collection) {
+                Collection positions = (Collection) decodedMessage;
+                if (!positions.isEmpty()) {
+                    position = (Position) positions.iterator().next();
+                }
+            }
+        }
+        if (position != null) {
+            Context.getConnectionManager().updateDevice(
+                    position.getDeviceId(), Device.STATUS_ONLINE, new Date());
+        } else {
+            DeviceSession deviceSession = getDeviceSession(channel, remoteAddress);
+            if (deviceSession != null) {
+                Context.getConnectionManager().updateDevice(
+                        deviceSession.getDeviceId(), Device.STATUS_ONLINE, new Date());
+            }
         }
     }
 

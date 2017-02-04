@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Anton Tananaev (anton.tananaev@gmail.com)
+ * Copyright 2014 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ public class Stl060ProtocolDecoder extends BaseProtocolDecoder {
         // Old format
         if (parser.hasNext(5)) {
             position.set(Position.KEY_ODOMETER, parser.nextInt());
-            position.set(Position.KEY_IGNITION, parser.nextInt());
+            position.set(Position.KEY_IGNITION, parser.nextInt() == 1);
             position.set(Position.KEY_INPUT, parser.nextInt() + parser.nextInt() << 1);
             position.set(Position.KEY_FUEL, parser.nextInt());
         }
@@ -106,7 +106,7 @@ public class Stl060ProtocolDecoder extends BaseProtocolDecoder {
         // New format
         if (parser.hasNext(10)) {
             position.set(Position.KEY_CHARGE, parser.nextInt() == 1);
-            position.set(Position.KEY_IGNITION, parser.nextInt());
+            position.set(Position.KEY_IGNITION, parser.nextInt() == 1);
             position.set(Position.KEY_INPUT, parser.nextInt());
             position.set(Position.KEY_RFID, parser.next());
             position.set(Position.KEY_ODOMETER, parser.nextInt());
