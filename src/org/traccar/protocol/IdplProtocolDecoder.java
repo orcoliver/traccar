@@ -94,19 +94,19 @@ public class IdplProtocolDecoder extends BaseProtocolDecoder {
 
         position.set(Position.KEY_SATELLITES, parser.nextInt());
         position.set(Position.KEY_RSSI, parser.nextInt());
-        parser.next(); // vehicle status
+        position.set("vehicleStatus", parser.next());
         position.set(Position.KEY_POWER, parser.nextInt());
         position.set(Position.KEY_BATTERY, parser.nextDouble());
         if (parser.nextInt() == 1) {
             position.set(Position.KEY_ALARM, Position.ALARM_SOS);
         }
         parser.nextInt(); // body tamper
-        parser.nextInt(); // ac status
+        position.set("acStatus", parser.nextInt());
         position.set(Position.KEY_IGNITION, parser.nextInt() == 1);
         position.set(Position.KEY_OUTPUT, parser.nextInt());
         position.set(Position.PREFIX_ADC + 1, parser.nextInt());
         position.set(Position.PREFIX_ADC + 2, parser.nextInt());
-        position.set(Position.KEY_VERSION, parser.next());
+        position.set(Position.KEY_VERSION_FW, parser.next());
         position.set(Position.KEY_ARCHIVE, parser.next().equals("R"));
 
         parser.next(); // checksum

@@ -22,47 +22,59 @@ public class Position extends Message {
     public static final String KEY_ORIGINAL = "raw";
     public static final String KEY_INDEX = "index";
     public static final String KEY_HDOP = "hdop";
-    public static final String KEY_SATELLITES = "sat";
+    public static final String KEY_VDOP = "vdop";
+    public static final String KEY_PDOP = "pdop";
+    public static final String KEY_SATELLITES = "sat"; // in use
+    public static final String KEY_SATELLITES_VISIBLE = "satVisible";
     public static final String KEY_RSSI = "rssi";
     public static final String KEY_GPS = "gps";
     public static final String KEY_EVENT = "event";
     public static final String KEY_ALARM = "alarm";
     public static final String KEY_STATUS = "status";
-    public static final String KEY_ODOMETER = "odometer"; // meters
-    public static final String KEY_TRIP_ODOMETER = "tripOdometer";
+    public static final String KEY_ODOMETER = "odometer";                 // meters
+    public static final String KEY_ODOMETER_SERVICE = "serviceOdometer";  // meters
+    public static final String KEY_ODOMETER_TRIP = "tripOdometer";        // meters
     public static final String KEY_HOURS = "hours";
     public static final String KEY_INPUT = "input";
     public static final String KEY_OUTPUT = "output";
-    public static final String KEY_POWER = "power";
-    public static final String KEY_BATTERY = "battery";
-    public static final String KEY_FUEL = "fuel";
-    public static final String KEY_FUEL_CONSUMPTION = "fuelConsumption";
+
+    // The units for the below four KEYs currently vary.
+    // The preferred units of measure are specified in the comment for each.
+    public static final String KEY_POWER = "power";                       // volts
+    public static final String KEY_BATTERY = "battery";                   // volts (or percentage appending '%')
+    public static final String KEY_FUEL_LEVEL = "fuel";                   // liters
+    public static final String KEY_FUEL_CONSUMPTION = "fuelConsumption";  // liters/hour
+
     public static final String KEY_RFID = "rfid";
-    public static final String KEY_VERSION = "version";
+    public static final String KEY_VERSION_FW = "versionFw";
+    public static final String KEY_VERSION_HW = "versionHw";
     public static final String KEY_TYPE = "type";
     public static final String KEY_IGNITION = "ignition";
     public static final String KEY_FLAGS = "flags";
     public static final String KEY_CHARGE = "charge";
     public static final String KEY_IP = "ip";
     public static final String KEY_ARCHIVE = "archive";
-    public static final String KEY_DISTANCE = "distance"; // meters
-    public static final String KEY_TOTAL_DISTANCE = "totalDistance";
+    public static final String KEY_DISTANCE = "distance";                 // meters
+    public static final String KEY_TOTAL_DISTANCE = "totalDistance";      // meters
     public static final String KEY_RPM = "rpm";
     public static final String KEY_VIN = "vin";
     public static final String KEY_APPROXIMATE = "approximate";
     public static final String KEY_THROTTLE = "throttle";
     public static final String KEY_MOTION = "motion";
     public static final String KEY_ARMED = "armed";
-    public static final String KEY_ACCURACY = "accuracy";
     public static final String KEY_GEOFENCE = "geofence";
+    public static final String KEY_ACCELERATION = "acceleration";
+    public static final String KEY_DEVICE_TEMP = "deviceTemp";            // celsius
+    public static final String KEY_OPERATOR = "operator";
+    public static final String KEY_COMMAND = "command";
 
     public static final String KEY_DTCS = "dtcs";
-    public static final String KEY_OBD_SPEED = "obdSpeed";
-    public static final String KEY_OBD_ODOMETER = "obdOdometer";
+    public static final String KEY_OBD_SPEED = "obdSpeed";                // knots
+    public static final String KEY_OBD_ODOMETER = "obdOdometer";          // meters
 
     public static final String KEY_RESULT = "result";
 
-    // Starts with 1 not 0
+    // Start with 1 not 0
     public static final String PREFIX_TEMP = "temp";
     public static final String PREFIX_ADC = "adc";
     public static final String PREFIX_IO = "io";
@@ -75,6 +87,7 @@ public class Position extends Message {
     public static final String ALARM_LOW_SPEED = "lowspeed";
     public static final String ALARM_OVERSPEED = "overspeed";
     public static final String ALARM_FALL_DOWN = "fallDown";
+    public static final String ALARM_LOW_POWER = "lowPower";
     public static final String ALARM_LOW_BATTERY = "lowBattery";
     public static final String ALARM_FAULT = "fault";
     public static final String ALARM_POWER_OFF = "powerOff";
@@ -86,7 +99,7 @@ public class Position extends Message {
     public static final String ALARM_GPS_ANTENNA_CUT = "gpsAntennaCut";
     public static final String ALARM_ACCIDENT = "accident";
     public static final String ALARM_TOW = "tow";
-    public static final String ALARM_ACCELETATION = "hardAcceleration";
+    public static final String ALARM_ACCELERATION = "hardAcceleration";
     public static final String ALARM_BREAKING = "hardBreaking";
     public static final String ALARM_FATIGUE_DRIVING = "fatigueDriving";
     public static final String ALARM_POWER_CUT = "powerCut";
@@ -97,6 +110,7 @@ public class Position extends Message {
     public static final String ALARM_BONNET = "bonnet";
     public static final String ALARM_FOOT_BRAKE = "footBrake";
     public static final String ALARM_OIL_LEAK = "oilLeak";
+    public static final String ALARM_TAMPERING = "tampering";
 
     private String protocol;
 
@@ -207,7 +221,7 @@ public class Position extends Message {
         this.longitude = longitude;
     }
 
-    private double altitude;
+    private double altitude; // value in meters
 
     public double getAltitude() {
         return altitude;

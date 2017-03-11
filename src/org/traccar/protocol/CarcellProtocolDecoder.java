@@ -118,7 +118,7 @@ public class CarcellProtocolDecoder extends BaseProtocolDecoder {
         }
 
         if (parser.hasNext(1)) {
-            position.set("accel", parser.nextInt());
+            position.set(Position.KEY_ACCELERATION, parser.nextInt());
         }
 
         Double internalBattery = (parser.nextDouble() + 100d) * 0.0294d;
@@ -127,7 +127,7 @@ public class CarcellProtocolDecoder extends BaseProtocolDecoder {
         position.set("jamming", parser.next().equals("1"));
         position.set(Position.KEY_GPS, parser.nextInt());
 
-        parser.next(); // clock type
+        position.set("clockType", parser.next());
 
         DateBuilder dateBuilder = new DateBuilder().
                 setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt())
@@ -155,7 +155,7 @@ public class CarcellProtocolDecoder extends BaseProtocolDecoder {
         if (parser.hasNext(5)) {
             position.set("timeUntilDelivery", parser.nextInt());
             parser.next(); // panic button status
-            parser.next(); // aux
+            position.set(Position.KEY_INPUT, parser.next());
 
             Double mainVoltage = parser.nextDouble() / 100d;
             position.set(Position.KEY_POWER, mainVoltage);
