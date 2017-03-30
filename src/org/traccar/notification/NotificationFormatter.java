@@ -18,10 +18,13 @@ package org.traccar.notification;
 
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.exception.ResourceNotFoundException;
+import org.apache.velocity.tools.generic.DateTool;
+import org.apache.velocity.tools.generic.NumberTool;
 import org.traccar.Context;
 import org.traccar.helper.Log;
 import org.traccar.model.Device;
@@ -48,6 +51,10 @@ public final class NotificationFormatter {
             velocityContext.put("geofence", Context.getGeofenceManager().getGeofence(event.getGeofenceId()));
         }
         velocityContext.put("webUrl", Context.getVelocityEngine().getProperty("web.url"));
+        velocityContext.put("dateTool", new DateTool());
+        velocityContext.put("numberTool", new NumberTool());
+        velocityContext.put("timezone", ReportUtils.getTimezone(userId));
+        velocityContext.put("locale", Locale.getDefault());
         return velocityContext;
     }
 

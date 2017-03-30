@@ -11,6 +11,12 @@ public class TaipProtocolDecoderTest extends ProtocolTest {
         TaipProtocolDecoder decoder = new TaipProtocolDecoder(new TaipProtocol(), false);
 
         verifyPosition(decoder, text(
+                ">REV421942237017+1170957-0701880200000032;ID=356612022463055<"));
+
+        verifyPosition(decoder, text(
+                ">RGP200317010815-3852.9306-06204.88560000003000101;&01;ID=5555;#7AD7*51<"));
+
+        verifyPosition(decoder, text(
                 ">RCQ09000000000000-3460365-058381460000007F0000000000000115000FFFF1099;#0000;ID=555224;*05<"));
 
         verifyPosition(decoder, text(
