@@ -53,8 +53,6 @@ public class TelicProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+)?,")                    // satellites
             .expression("(?:[^,]*,){7}")
             .number("(d+),")                     // battery
-            .expression("[^,]*,")
-            .number("(d+)?")                     // external
             .any()
             .compile();
 
@@ -98,7 +96,7 @@ public class TelicProtocolDecoder extends BaseProtocolDecoder {
         }
         position.setDeviceId(deviceSession.getDeviceId());
 
-        int event = parser.nextInt();
+        int event = parser.nextInt(0);
         position.set(Position.KEY_EVENT, event);
 
         position.set(Position.KEY_ALARM, decodeAlarm(event));
@@ -117,23 +115,19 @@ public class TelicProtocolDecoder extends BaseProtocolDecoder {
         }
 
         if (parser.hasNext(2)) {
-            position.setLongitude(parser.nextDouble() / 10000);
-            position.setLatitude(parser.nextDouble() / 10000);
+            position.setLongitude(parser.nextDouble(0) / 10000);
+            position.setLatitude(parser.nextDouble(0) / 10000);
         }
 
-        position.setValid(parser.nextInt() != 1);
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
-        position.setCourse(parser.nextDouble());
+        position.setValid(parser.nextInt(0) != 1);
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
+        position.setCourse(parser.nextDouble(0));
 
         if (parser.hasNext()) {
-            position.set(Position.KEY_SATELLITES, parser.nextInt());
+            position.set(Position.KEY_SATELLITES, parser.nextInt(0));
         }
 
-        position.set(Position.KEY_BATTERY, parser.nextInt());
-
-        if (parser.hasNext()) {
-            position.set(Position.KEY_POWER, parser.nextInt());
-        }
+        position.set(Position.KEY_BATTERY, parser.nextInt(0));
 
         return position;
     }

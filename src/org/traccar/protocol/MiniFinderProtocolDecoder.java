@@ -78,8 +78,8 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
     private void decodeFix(Position position, Parser parser) {
 
         position.setTime(parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
-        position.setLatitude(parser.nextDouble());
-        position.setLongitude(parser.nextDouble());
+        position.setLatitude(parser.nextDouble(0));
+        position.setLongitude(parser.nextDouble(0));
     }
 
     private void decodeFlags(Position position, int flags) {
@@ -114,25 +114,25 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
 
     private void decodeState(Position position, Parser parser) {
 
-        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble()));
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextDouble(0)));
 
-        position.setCourse(parser.nextDouble());
+        position.setCourse(parser.nextDouble(0));
         if (position.getCourse() > 360) {
             position.setCourse(0);
         }
 
-        decodeFlags(position, parser.nextInt(16));
+        decodeFlags(position, parser.nextHexInt(0));
 
-        position.setAltitude(parser.nextDouble());
+        position.setAltitude(parser.nextDouble(0));
 
-        position.set(Position.KEY_BATTERY, parser.nextInt());
+        position.set(Position.KEY_BATTERY, parser.nextInt(0));
     }
 
     private void decodeGPSPrecision(Position position, Parser parser) {
 
-        position.set(Position.KEY_SATELLITES, parser.nextInt());
-        position.set(Position.KEY_SATELLITES_VISIBLE, parser.nextInt());
-        position.set(Position.KEY_HDOP, parser.nextDouble());
+        position.set(Position.KEY_SATELLITES, parser.nextInt(0));
+        position.set(Position.KEY_SATELLITES_VISIBLE, parser.nextInt(0));
+        position.set(Position.KEY_HDOP, parser.nextDouble(0));
     }
 
     @Override
@@ -142,18 +142,12 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
         String sentence = (String) msg;
 
         if (sentence.startsWith("!1,")) {
-
             getDeviceSession(channel, remoteAddress, sentence.substring(3, sentence.length()));
-
             return null;
         }
 
         DeviceSession deviceSession = getDeviceSession(channel, remoteAddress);
-        if (deviceSession == null) {
-            return null;
-        }
-
-        if (!sentence.matches("![A-D],.*")) {
+        if (deviceSession == null || !sentence.matches("![A-D],.*")) {
             return null;
         }
 
@@ -161,10 +155,11 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
         position.setProtocol(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
-        String recordType = sentence.substring(1, 2);
-        position.set(Position.KEY_TYPE, recordType);
+        String type = sentence.substring(1, 2);
+        position.set(Position.KEY_TYPE, type);
 
-        if (recordType.matches("[BD]")) {
+        if (type.equals("B") || type.equals("D")) {
+
             Parser parser = new Parser(PATTERN_BD, sentence);
             if (!parser.matches()) {
                 return null;
@@ -175,9 +170,9 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
             decodeGPSPrecision(position, parser);
 
             return position;
-        }
 
-        if (recordType.matches("C")) {
+        } else if (type.equals("C")) {
+
             Parser parser = new Parser(PATTERN_C, sentence);
             if (!parser.matches()) {
                 return null;
@@ -187,9 +182,9 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
             decodeState(position, parser);
 
             return position;
-        }
 
-        if (recordType.matches("A")) {
+        } else if (type.equals("A")) {
+
             Parser parser = new Parser(PATTERN_A, sentence);
             if (!parser.matches()) {
                 return null;
@@ -198,6 +193,7 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
             decodeFix(position, parser);
 
             return position;
+
         }
 
         return null;
