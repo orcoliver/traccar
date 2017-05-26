@@ -180,6 +180,34 @@ public class ProtocolTest extends BaseTest {
             Assert.assertFalse("no attributes", attributes.isEmpty());
         }
 
+        if (attributes.containsKey(Position.KEY_INDEX)) {
+            Assert.assertTrue(attributes.get(Position.KEY_INDEX) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_HDOP)) {
+            Assert.assertTrue(attributes.get(Position.KEY_HDOP) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_VDOP)) {
+            Assert.assertTrue(attributes.get(Position.KEY_VDOP) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_PDOP)) {
+            Assert.assertTrue(attributes.get(Position.KEY_PDOP) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_SATELLITES)) {
+            Assert.assertTrue(attributes.get(Position.KEY_SATELLITES) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_SATELLITES_VISIBLE)) {
+            Assert.assertTrue(attributes.get(Position.KEY_SATELLITES_VISIBLE) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_RSSI)) {
+            Assert.assertTrue(attributes.get(Position.KEY_RSSI) instanceof Number);
+        }
+
         if (attributes.containsKey(Position.KEY_ODOMETER)) {
             Assert.assertTrue(attributes.get(Position.KEY_ODOMETER) instanceof Number);
         }
@@ -190,6 +218,23 @@ public class ProtocolTest extends BaseTest {
 
         if (attributes.containsKey(Position.KEY_FUEL_LEVEL)) {
             Assert.assertTrue(attributes.get(Position.KEY_FUEL_LEVEL) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_POWER)) {
+            Assert.assertTrue(attributes.get(Position.KEY_POWER) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_BATTERY)) {
+            Assert.assertTrue(attributes.get(Position.KEY_BATTERY) instanceof Number);
+        }
+
+        if (attributes.containsKey(Position.KEY_BATTERY_LEVEL)) {
+            int batteryLevel = ((Number) attributes.get(Position.KEY_BATTERY_LEVEL)).intValue();
+            Assert.assertTrue(batteryLevel <= 100 && batteryLevel >= 0);
+        }
+
+        if (attributes.containsKey(Position.KEY_CHARGE)) {
+            Assert.assertTrue(attributes.get(Position.KEY_CHARGE) instanceof Boolean);
         }
 
         if (position.getNetwork() != null && position.getNetwork().getCellTowers() != null) {

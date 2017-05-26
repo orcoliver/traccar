@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 - 2016 Anton Tananaev (anton@traccar.org)
+ * Copyright 2014 - 2017 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,12 +48,6 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
             .number("(d+),")                     // battery (percentage)
             .compile();
 
-    private static final Pattern PATTERN_GPS_PRECISION = new PatternBuilder()
-            .number("(d+),")                     // satellites in use
-            .number("(d+),")                     // satellites in view
-            .number("(d+.?d*)")                  // hdop
-            .compile();
-
     private static final Pattern PATTERN_A = new PatternBuilder()
             .text("!A,")
             .expression(PATTERN_FIX.pattern())
@@ -67,12 +61,13 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
             .any()                               // unknown 3 fields
             .compile();
 
-    // The !B (buffered data) records are the same as !D (live data) records.
     private static final Pattern PATTERN_BD = new PatternBuilder()
-            .expression("![BD],")
+            .expression("![BD],")                // B - buffered, D - live
             .expression(PATTERN_FIX.pattern())
             .expression(PATTERN_STATE.pattern())
-            .expression(PATTERN_GPS_PRECISION.pattern())
+            .number("(d+),")                     // satellites in use
+            .number("(d+),")                     // satellites in view
+            .number("(d+.?d*)")                  // hdop
             .compile();
 
     private void decodeFix(Position position, Parser parser) {
@@ -84,7 +79,10 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
 
     private void decodeFlags(Position position, int flags) {
 
-        position.setValid(BitUtil.check(flags, 0));
+        position.setValid(BitUtil.to(flags, 2) > 0);
+        if (BitUtil.check(flags, 1)) {
+            position.set(Position.KEY_APPROXIMATE, true);
+        }
 
         if (BitUtil.check(flags, 2)) {
             position.set(Position.KEY_ALARM, Position.ALARM_FAULT);
@@ -108,7 +106,7 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.KEY_ALARM, Position.ALARM_MOVEMENT);
         }
 
-        position.set(Position.KEY_RSSI, BitUtil.between(flags, 16, 20));
+        position.set(Position.KEY_RSSI, BitUtil.between(flags, 16, 21));
         position.set(Position.KEY_CHARGE, BitUtil.check(flags, 22));
     }
 
@@ -126,13 +124,6 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
         position.setAltitude(parser.nextDouble(0));
 
         position.set(Position.KEY_BATTERY, parser.nextInt(0));
-    }
-
-    private void decodeGPSPrecision(Position position, Parser parser) {
-
-        position.set(Position.KEY_SATELLITES, parser.nextInt(0));
-        position.set(Position.KEY_SATELLITES_VISIBLE, parser.nextInt(0));
-        position.set(Position.KEY_HDOP, parser.nextDouble(0));
     }
 
     @Override
@@ -167,7 +158,10 @@ public class MiniFinderProtocolDecoder extends BaseProtocolDecoder {
 
             decodeFix(position, parser);
             decodeState(position, parser);
-            decodeGPSPrecision(position, parser);
+
+            position.set(Position.KEY_SATELLITES, parser.nextInt(0));
+            position.set(Position.KEY_SATELLITES_VISIBLE, parser.nextInt(0));
+            position.set(Position.KEY_HDOP, parser.nextDouble(0));
 
             return position;
 

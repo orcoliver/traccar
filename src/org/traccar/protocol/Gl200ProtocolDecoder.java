@@ -399,9 +399,7 @@ public class Gl200ProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_BATTERY, parser.nextDouble(0));
         position.set(Position.KEY_CHARGE, parser.nextInt(0) == 1);
 
-        if (parser.hasNext()) {
-            position.set(Position.KEY_BATTERY, parser.next() + "%");
-        }
+        position.set(Position.KEY_BATTERY_LEVEL, parser.nextInt());
 
         position.set(Position.PREFIX_TEMP + 1, parser.next());
 
@@ -546,13 +544,13 @@ public class Gl200ProtocolDecoder extends BaseProtocolDecoder {
         }
 
         position.set(Position.KEY_ODOMETER, parser.nextDouble(0) * 1000);
-        position.set(Position.KEY_BATTERY, parser.next());
+        position.set(Position.KEY_BATTERY_LEVEL, parser.nextInt());
 
         position.set(Position.KEY_ODOMETER, parser.nextDouble(0) * 1000);
         position.set(Position.KEY_HOURS, parser.next());
         position.set(Position.PREFIX_ADC + 1, parser.next());
         position.set(Position.PREFIX_ADC + 2, parser.next());
-        position.set(Position.KEY_BATTERY, parser.next());
+        position.set(Position.KEY_BATTERY_LEVEL, parser.nextInt());
 
         decodeStatus(position, parser);
 
@@ -599,7 +597,7 @@ public class Gl200ProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_HOURS, parser.next());
         position.set(Position.PREFIX_ADC + 1, parser.next());
         position.set(Position.PREFIX_ADC + 2, parser.next());
-        position.set(Position.KEY_BATTERY, parser.next());
+        position.set(Position.KEY_BATTERY_LEVEL, parser.nextInt());
 
         decodeStatus(position, parser);
 
@@ -664,7 +662,7 @@ public class Gl200ProtocolDecoder extends BaseProtocolDecoder {
 
         position.setNetwork(network);
 
-        position.set(Position.KEY_BATTERY, parser.nextInt(0));
+        position.set(Position.KEY_BATTERY_LEVEL, parser.nextInt(0));
 
         return position;
     }
@@ -712,7 +710,7 @@ public class Gl200ProtocolDecoder extends BaseProtocolDecoder {
         decodeLocation(position, parser);
 
         position.set(Position.KEY_ODOMETER, parser.nextDouble(0) * 1000);
-        position.set(Position.KEY_BATTERY, parser.next());
+        position.set(Position.KEY_BATTERY_LEVEL, parser.nextInt(0));
 
         position.set(Position.KEY_ODOMETER, parser.nextDouble(0) * 1000);
 
@@ -759,9 +757,28 @@ public class Gl200ProtocolDecoder extends BaseProtocolDecoder {
         decodeDeviceTime(position, parser);
 
         switch (type) {
+            case "PNA":
+                position.set(Position.KEY_ALARM, Position.ALARM_POWER_ON);
+                break;
+            case "PFA":
+                position.set(Position.KEY_ALARM, Position.ALARM_POWER_OFF);
+                break;
+            case "EPN":
+                position.set(Position.KEY_ALARM, Position.ALARM_POWER_RESTORED);
+                break;
+            case "EPF":
+                position.set(Position.KEY_ALARM, Position.ALARM_POWER_CUT);
+                break;
             case "BPL":
                 position.set(Position.KEY_ALARM, Position.ALARM_LOW_BATTERY);
                 break;
+            case "STT":
+                position.set(Position.KEY_ALARM, Position.ALARM_MOVEMENT);
+                break;
+            case "SWG":
+                position.set(Position.KEY_ALARM, Position.ALARM_GEOFENCE);
+                break;
+            case "TMP":
             case "TEM":
                 position.set(Position.KEY_ALARM, Position.ALARM_TEMPERATURE);
                 break;
