@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Anton Tananaev (anton@traccar.org)
+ * Copyright 2017 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,18 @@
  */
 package org.traccar.protocol;
 
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.traccar.BaseProtocol;
 import org.traccar.TrackerServer;
-import org.traccar.model.Command;
 
 import java.util.List;
 
-public class AtrackProtocol extends BaseProtocol {
+public class Vt200Protocol extends BaseProtocol {
 
-    public AtrackProtocol() {
-        super("atrack");
-        setSupportedDataCommands(
-                Command.TYPE_CUSTOM);
+    public Vt200Protocol() {
+        super("vt200");
     }
 
     @Override
@@ -37,16 +34,8 @@ public class AtrackProtocol extends BaseProtocol {
         serverList.add(new TrackerServer(new ServerBootstrap(), getName()) {
             @Override
             protected void addSpecificHandlers(ChannelPipeline pipeline) {
-                pipeline.addLast("frameDecoder", new AtrackFrameDecoder());
-                pipeline.addLast("objectEncoder", new AtrackProtocolEncoder());
-                pipeline.addLast("objectDecoder", new AtrackProtocolDecoder(AtrackProtocol.this));
-            }
-        });
-        serverList.add(new TrackerServer(new ConnectionlessBootstrap(), getName()) {
-            @Override
-            protected void addSpecificHandlers(ChannelPipeline pipeline) {
-                pipeline.addLast("objectEncoder", new AtrackProtocolEncoder());
-                pipeline.addLast("objectDecoder", new AtrackProtocolDecoder(AtrackProtocol.this));
+                pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(1024, 1 + 6 + 2, 2, 2, 0));
+                pipeline.addLast("objectDecoder", new Vt200ProtocolDecoder(Vt200Protocol.this));
             }
         });
     }
