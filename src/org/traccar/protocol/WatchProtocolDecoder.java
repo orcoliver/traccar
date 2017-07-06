@@ -76,6 +76,8 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
             return Position.ALARM_GEOFENCE_ENTER;
         } else if (BitUtil.check(status, 3)) {
             return Position.ALARM_OVERSPEED;
+        } else if (BitUtil.check(status, 4)) {
+            return Position.ALARM_MOVEMENT;
         } else if (BitUtil.check(status, 16)) {
             return Position.ALARM_SOS;
         } else if (BitUtil.check(status, 17)) {
@@ -84,6 +86,10 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
             return Position.ALARM_GEOFENCE_EXIT;
         } else if (BitUtil.check(status, 19)) {
             return Position.ALARM_GEOFENCE_ENTER;
+        } else if (BitUtil.check(status, 20)) {
+            return Position.ALARM_REMOVING;
+        } else if (BitUtil.check(status, 21)) {
+            return Position.ALARM_FALL_DOWN;
         }
         return null;
     }
@@ -216,15 +222,20 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
         } else if (type.equals("PULSE") || type.equals("heart")) {
 
             if (buf.readable()) {
+
                 Position position = new Position();
                 position.setProtocol(getProtocolName());
                 position.setDeviceId(deviceSession.getDeviceId());
+
                 getLastLocation(position, new Date());
+
                 position.setValid(false);
                 String pulse = buf.toString(StandardCharsets.US_ASCII);
                 position.set("pulse", pulse);
                 position.set(Position.KEY_RESULT, pulse);
+
                 return position;
+
             }
 
         } else if (type.equals("img")) {
@@ -238,6 +249,18 @@ public class WatchProtocolDecoder extends BaseProtocolDecoder {
             int timeIndex = buf.indexOf(buf.readerIndex(), buf.writerIndex(), (byte) ',');
             buf.readerIndex(timeIndex + 12 + 2);
             position.set(Position.KEY_IMAGE, Context.getMediaManager().writeFile(id, buf, "jpg"));
+
+            return position;
+
+        } else if (type.equals("TK")) {
+
+            Position position = new Position();
+            position.setProtocol(getProtocolName());
+            position.setDeviceId(deviceSession.getDeviceId());
+
+            getLastLocation(position, null);
+
+            position.set(Position.KEY_AUDIO, Context.getMediaManager().writeFile(id, buf, "amr"));
 
             return position;
 

@@ -49,8 +49,8 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
     private int timeout;
 
     private FilterHandler filterHandler;
-    private CoordinatesHandler coordinatesHandler;
     private DistanceHandler distanceHandler;
+    private MotionHandler motionHandler;
     private GeocoderHandler geocoderHandler;
     private GeolocationHandler geolocationHandler;
     private HemisphereHandler hemisphereHandler;
@@ -125,12 +125,12 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
             }
         }
 
+        distanceHandler = new DistanceHandler(Context.getConfig().getBoolean("coordinates.filter"),
+                Context.getConfig().getInteger("coordinates.minError"),
+                Context.getConfig().getInteger("coordinates.maxError"));
+
         if (Context.getConfig().getBoolean("filter.enable")) {
             filterHandler = new FilterHandler();
-        }
-
-        if (Context.getConfig().getBoolean("coordinates.filter")) {
-            coordinatesHandler = new CoordinatesHandler();
         }
 
         if (Context.getGeocoder() != null) {
@@ -145,7 +145,7 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
                     Context.getConfig().getBoolean("geolocation.processInvalidPositions"));
         }
 
-        distanceHandler = new DistanceHandler();
+        motionHandler = new MotionHandler(Context.getConfig().getDouble("event.motion.speedThreshold", 0.01));
 
         if (Context.getConfig().hasKey("location.latitudeHemisphere")
                 || Context.getConfig().hasKey("location.longitudeHemisphere")) {
@@ -193,9 +193,11 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
         if (hemisphereHandler != null) {
             pipeline.addLast("hemisphere", hemisphereHandler);
         }
-        if (geocoderHandler != null) {
-            pipeline.addLast("geocoder", geocoderHandler);
+
+        if (distanceHandler != null) {
+            pipeline.addLast("distance", distanceHandler);
         }
+
         pipeline.addLast("remoteAddress", new RemoteAddressHandler());
 
         addDynamicHandlers(pipeline);
@@ -204,12 +206,12 @@ public abstract class BasePipelineFactory implements ChannelPipelineFactory {
             pipeline.addLast("filter", filterHandler);
         }
 
-        if (coordinatesHandler != null) {
-            pipeline.addLast("coordinatesHandler", coordinatesHandler);
+        if (geocoderHandler != null) {
+            pipeline.addLast("geocoder", geocoderHandler);
         }
 
-        if (distanceHandler != null) {
-            pipeline.addLast("distance", distanceHandler);
+        if (motionHandler != null) {
+            pipeline.addLast("motion", motionHandler);
         }
 
         if (copyAttributesHandler != null) {

@@ -22,6 +22,8 @@ import org.traccar.BaseProtocolDecoder;
 import org.traccar.Context;
 import org.traccar.DeviceSession;
 import org.traccar.helper.DateBuilder;
+import org.traccar.helper.Parser;
+import org.traccar.helper.PatternBuilder;
 import org.traccar.helper.UnitsConverter;
 import org.traccar.model.CellTower;
 import org.traccar.model.Network;
@@ -34,6 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class AtrackProtocolDecoder extends BaseProtocolDecoder {
 
@@ -195,6 +198,64 @@ public class AtrackProtocolDecoder extends BaseProtocolDecoder {
         }
     }
 
+    private static final Pattern PATTERN_INFO = new PatternBuilder()
+            .text("$INFO=")
+            .number("(d+),")                     // unit id
+            .expression("([^,]+),")              // model
+            .expression("([^,]+),")              // firmware version
+            .number("d+,")                       // imei
+            .number("d+,")                       // imsi
+            .number("d+,")                       // sim card id
+            .number("(d+),")                     // power
+            .number("(d+),")                     // battery
+            .number("(d+),")                     // satellites
+            .number("d+,")                       // gsm status
+            .number("(d+),")                     // rssi
+            .number("d+,")                       // connection status
+            .number("d+")                        // antenna status
+            .any()
+            .compile();
+
+    private Position decodeString(Channel channel, SocketAddress remoteAddress, String sentence) {
+        Position position = new Position();
+        position.setProtocol(getProtocolName());
+
+        getLastLocation(position, null);
+
+        DeviceSession deviceSession;
+
+        if (sentence.startsWith("$INFO")) {
+
+            Parser parser = new Parser(PATTERN_INFO, sentence);
+            if (!parser.matches()) {
+                return null;
+            }
+
+            deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
+
+            position.set("model", parser.next());
+            position.set(Position.KEY_VERSION_FW, parser.next());
+            position.set(Position.KEY_POWER, parser.nextInt() * 0.1);
+            position.set(Position.KEY_BATTERY, parser.nextInt() * 0.1);
+            position.set(Position.KEY_SATELLITES, parser.nextInt());
+            position.set(Position.KEY_RSSI, parser.nextInt());
+
+        } else {
+
+            deviceSession = getDeviceSession(channel, remoteAddress);
+
+            position.set(Position.KEY_RESULT, sentence);
+
+        }
+
+        if (deviceSession == null) {
+            return null;
+        } else {
+            position.setDeviceId(deviceSession.getDeviceId());
+            return position;
+        }
+    }
+
     @Override
     protected Object decode(
             Channel channel, SocketAddress remoteAddress, Object msg) throws Exception {
@@ -206,6 +267,8 @@ public class AtrackProtocolDecoder extends BaseProtocolDecoder {
                 channel.write(buf, remoteAddress); // keep-alive message
             }
             return null;
+        } else if (buf.getByte(buf.readerIndex()) == '$') {
+            return decodeString(channel, remoteAddress, buf.toString(StandardCharsets.US_ASCII).trim());
         }
 
         buf.skipBytes(2); // prefix

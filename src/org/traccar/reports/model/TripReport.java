@@ -145,15 +145,4 @@ public class TripReport extends BaseReport {
     public void setDuration(long duration) {
         this.duration = duration;
     }
-
-    private String spentFuel;
-
-    public String getSpentFuel() {
-        return spentFuel;
-    }
-
-    public void setSpentFuel(String spentFuel) {
-        this.spentFuel = spentFuel;
-    }
-
 }
