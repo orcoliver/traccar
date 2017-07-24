@@ -1,5 +1,6 @@
 /*
- * Copyright 2016 Anton Tananaev (anton@traccar.org)
+ * Copyright 2017 Anton Tananaev (anton@traccar.org)
+ * Copyright 2017 Andrey Kunitsyn (andrey@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +16,16 @@
  */
 package org.traccar.model;
 
-public class GeofencePermission {
+public class BaseModel {
 
-    private long userId;
+    private long id;
 
-    public long getUserId() {
-        return userId;
+    public final long getId() {
+        return id;
     }
 
-    public void setUserId(long userId) {
-        this.userId = userId;
-    }
-
-    private long geofenceId;
-
-    public long getGeofenceId() {
-        return geofenceId;
-    }
-
-    public void setGeofenceId(long geofenceId) {
-        this.geofenceId = geofenceId;
+    public final void setId(long id) {
+        this.id = id;
     }
 
 }

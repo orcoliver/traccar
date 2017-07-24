@@ -16,26 +16,25 @@
  */
 package org.traccar.model;
 
-public class UserPermission {
+public class Driver extends ExtendedModel {
 
-    private long userId;
+    private String name;
 
-    public long getUserId() {
-        return userId;
+    public String getName() {
+        return name;
     }
 
-    public void setUserId(long userId) {
-        this.userId = userId;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    private long managedUserId;
+    private String uniqueId;
 
-    public long getManagedUserId() {
-        return managedUserId;
+    public String getUniqueId() {
+        return uniqueId;
     }
 
-    public void setManagedUserId(long managedUserId) {
-        this.managedUserId = managedUserId;
+    public void setUniqueId(String uniqueId) {
+        this.uniqueId = uniqueId;
     }
-
 }

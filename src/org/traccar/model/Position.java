@@ -49,7 +49,6 @@ public class Position extends Message {
     public static final String KEY_FUEL_LEVEL = "fuel"; // liters
     public static final String KEY_FUEL_CONSUMPTION = "fuelConsumption"; // liters/hour
 
-    public static final String KEY_RFID = "rfid";
     public static final String KEY_VERSION_FW = "versionFw";
     public static final String KEY_VERSION_HW = "versionHw";
     public static final String KEY_TYPE = "type";
@@ -81,6 +80,8 @@ public class Position extends Message {
 
     public static final String KEY_RESULT = "result";
 
+    public static final String KEY_DRIVER_UNIQUE_ID = "driverUniqueId";
+
     // Start with 1 not 0
     public static final String PREFIX_TEMP = "temp";
     public static final String PREFIX_ADC = "adc";
@@ -110,6 +111,7 @@ public class Position extends Message {
     public static final String ALARM_TOW = "tow";
     public static final String ALARM_ACCELERATION = "hardAcceleration";
     public static final String ALARM_BREAKING = "hardBreaking";
+    public static final String ALARM_CORNERING = "hardCornering";
     public static final String ALARM_FATIGUE_DRIVING = "fatigueDriving";
     public static final String ALARM_POWER_CUT = "powerCut";
     public static final String ALARM_POWER_RESTORED = "powerRestored";
