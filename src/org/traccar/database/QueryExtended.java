@@ -16,21 +16,12 @@
  */
 package org.traccar.database;
 
-import org.traccar.model.Attribute;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class AttributesManager extends ExtendedObjectManager<Attribute> {
-
-    public AttributesManager(DataManager dataManager) {
-        super(dataManager, Attribute.class);
-    }
-
-    @Override
-    public void updateCachedItem(Attribute attribute) {
-        Attribute cachedAttribute = getById(attribute.getId());
-        cachedAttribute.setDescription(attribute.getDescription());
-        cachedAttribute.setAttribute(attribute.getAttribute());
-        cachedAttribute.setExpression(attribute.getExpression());
-        cachedAttribute.setType(attribute.getType());
-    }
-
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface QueryExtended {
 }

@@ -55,8 +55,10 @@ public final class Stops {
         return (Collection<StopReport>) result;
     }
 
-    public static Collection<StopReport> getObjects(long userId, Collection<Long> deviceIds, Collection<Long> groupIds,
+    public static Collection<StopReport> getObjects(
+            long userId, Collection<Long> deviceIds, Collection<Long> groupIds,
             Date from, Date to) throws SQLException {
+        ReportUtils.checkPeriodLimit(from, to);
         ArrayList<StopReport> result = new ArrayList<>();
         for (long deviceId: ReportUtils.getDeviceList(deviceIds, groupIds)) {
             Context.getPermissionsManager().checkDevice(userId, deviceId);
@@ -65,20 +67,21 @@ public final class Stops {
         return result;
     }
 
-    public static void getExcel(OutputStream outputStream,
-            long userId, Collection<Long> deviceIds, Collection<Long> groupIds,
+    public static void getExcel(
+            OutputStream outputStream, long userId, Collection<Long> deviceIds, Collection<Long> groupIds,
             Date from, Date to) throws SQLException, IOException {
+        ReportUtils.checkPeriodLimit(from, to);
         ArrayList<DeviceReport> devicesStops = new ArrayList<>();
         ArrayList<String> sheetNames = new ArrayList<>();
         for (long deviceId: ReportUtils.getDeviceList(deviceIds, groupIds)) {
             Context.getPermissionsManager().checkDevice(userId, deviceId);
             Collection<StopReport> stops = detectStops(deviceId, from, to);
             DeviceReport deviceStops = new DeviceReport();
-            Device device = Context.getIdentityManager().getDeviceById(deviceId);
+            Device device = Context.getIdentityManager().getById(deviceId);
             deviceStops.setDeviceName(device.getName());
             sheetNames.add(WorkbookUtil.createSafeSheetName(deviceStops.getDeviceName()));
             if (device.getGroupId() != 0) {
-                Group group = Context.getDeviceManager().getGroupById(device.getGroupId());
+                Group group = Context.getGroupsManager().getById(device.getGroupId());
                 if (group != null) {
                     deviceStops.setGroupName(group.getName());
                 }

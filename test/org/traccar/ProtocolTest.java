@@ -118,7 +118,7 @@ public class ProtocolTest extends BaseTest {
 
         Assert.assertNotNull("list is null", decodedObject);
         Assert.assertTrue("not a list", decodedObject instanceof List);
-        Assert.assertFalse("list if empty", ((List) decodedObject).isEmpty());
+        Assert.assertFalse("list is empty", ((List) decodedObject).isEmpty());
 
         for (Object item : (List) decodedObject) {
             verifyDecodedPosition(item, checkLocation, false, expected);
@@ -270,14 +270,14 @@ public class ProtocolTest extends BaseTest {
 
     protected void verifyCommand(
             BaseProtocolEncoder encoder, Command command, ChannelBuffer expected) throws Exception {
-        verifyDecodedCommand(encoder.encodeCommand(command), expected);
+        verifyFrame(expected, encoder.encodeCommand(command));
     }
 
-    private void verifyDecodedCommand(Object decodedObject, ChannelBuffer expected) {
+    protected void verifyFrame(ChannelBuffer expected, Object object) {
 
-        Assert.assertNotNull("command is null", decodedObject);
-        Assert.assertTrue("not a buffer", decodedObject instanceof ChannelBuffer);
-        Assert.assertEquals(ChannelBuffers.hexDump(expected), ChannelBuffers.hexDump((ChannelBuffer) decodedObject));
+        Assert.assertNotNull("buffer is null", object);
+        Assert.assertTrue("not a buffer", object instanceof ChannelBuffer);
+        Assert.assertEquals(ChannelBuffers.hexDump(expected), ChannelBuffers.hexDump((ChannelBuffer) object));
 
     }
 

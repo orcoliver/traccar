@@ -27,16 +27,18 @@ import org.traccar.Context;
 import org.traccar.helper.Log;
 import org.traccar.model.Device;
 import org.traccar.model.Group;
+import org.traccar.model.Permission;
 import org.traccar.model.BaseModel;
 
-public abstract class ExtendedObjectManager extends SimpleObjectManager {
+public abstract class ExtendedObjectManager<T extends BaseModel> extends SimpleObjectManager<T> {
 
     private final Map<Long, Set<Long>> deviceItems = new ConcurrentHashMap<>();
     private final Map<Long, Set<Long>> deviceItemsWithGroups = new ConcurrentHashMap<>();
     private final Map<Long, Set<Long>> groupItems = new ConcurrentHashMap<>();
 
-    protected ExtendedObjectManager(DataManager dataManager, Class<? extends BaseModel> baseClass) {
+    protected ExtendedObjectManager(DataManager dataManager, Class<T> baseClass) {
         super(dataManager, baseClass);
+        refreshExtendedPermissions();
     }
 
     public final Set<Long> getGroupItems(long groupId) {
@@ -46,19 +48,11 @@ public abstract class ExtendedObjectManager extends SimpleObjectManager {
         return groupItems.get(groupId);
     }
 
-    protected final void clearGroupItems() {
-        groupItems.clear();
-    }
-
     public final Set<Long> getDeviceItems(long deviceId) {
         if (!deviceItems.containsKey(deviceId)) {
             deviceItems.put(deviceId, new HashSet<Long>());
         }
         return deviceItems.get(deviceId);
-    }
-
-    protected final void clearDeviceItems() {
-        deviceItems.clear();
     }
 
     public Set<Long> getAllDeviceItems(long deviceId) {
@@ -78,42 +72,39 @@ public abstract class ExtendedObjectManager extends SimpleObjectManager {
         if (getDataManager() != null) {
             try {
 
-                Collection<Map<String, Long>> databaseGroupPermissions =
+                Collection<Permission> databaseGroupPermissions =
                         getDataManager().getPermissions(Group.class, getBaseClass());
 
-                clearGroupItems();
-                for (Map<String, Long> groupPermission : databaseGroupPermissions) {
-                    getGroupItems(groupPermission.get(DataManager.makeNameId(Group.class)))
-                            .add(groupPermission.get(getBaseClassIdName()));
+                groupItems.clear();
+                for (Permission groupPermission : databaseGroupPermissions) {
+                    getGroupItems(groupPermission.getOwnerId()).add(groupPermission.getPropertyId());
                 }
 
-                Collection<Map<String, Long>> databaseDevicePermissions =
+                Collection<Permission> databaseDevicePermissions =
                         getDataManager().getPermissions(Device.class, getBaseClass());
-                Collection<Device> allDevices = Context.getDeviceManager().getAllDevices();
 
-                clearDeviceItems();
+                deviceItems.clear();
                 deviceItemsWithGroups.clear();
 
-                for (Map<String, Long> devicePermission : databaseDevicePermissions) {
-                    getDeviceItems(devicePermission.get(DataManager.makeNameId(Device.class)))
-                            .add(devicePermission.get(getBaseClassIdName()));
-                    getAllDeviceItems(devicePermission.get(DataManager.makeNameId(Device.class)))
-                            .add(devicePermission.get(getBaseClassIdName()));
+                for (Permission devicePermission : databaseDevicePermissions) {
+                    getDeviceItems(devicePermission.getOwnerId()).add(devicePermission.getPropertyId());
+                    getAllDeviceItems(devicePermission.getOwnerId()).add(devicePermission.getPropertyId());
                 }
 
-                for (Device device : allDevices) {
+                for (Device device : Context.getDeviceManager().getAllDevices()) {
                     long groupId = device.getGroupId();
                     while (groupId != 0) {
                         getAllDeviceItems(device.getId()).addAll(getGroupItems(groupId));
-                        if (Context.getDeviceManager().getGroupById(groupId) != null) {
-                            groupId = Context.getDeviceManager().getGroupById(groupId).getGroupId();
+                        Group group = (Group) Context.getGroupsManager().getById(groupId);
+                        if (group != null) {
+                            groupId = group.getGroupId();
                         } else {
                             groupId = 0;
                         }
                     }
                 }
 
-            } catch (SQLException error) {
+            } catch (SQLException | ClassNotFoundException error) {
                 Log.warning(error);
             }
         }
