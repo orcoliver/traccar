@@ -297,7 +297,7 @@ public class DataManager {
 
     public User login(String email, String password) throws SQLException {
         User user = QueryBuilder.create(dataSource, getQuery("database.loginUser"))
-                .setString("email", email)
+                .setString("email", email.trim())
                 .executeQuerySingle(User.class);
         if (user != null && user.isPasswordValid(password)) {
             return user;
@@ -419,9 +419,9 @@ public class DataManager {
         }
     }
 
-    public static String makeNameId(Class<?> clazz) {
+    private static String makeNameId(Class<?> clazz) {
         String name = clazz.getSimpleName();
-        return Introspector.decapitalize(name) + (name.indexOf("Id") == -1 ? "Id" : "");
+        return Introspector.decapitalize(name) + (!name.contains("Id") ? "Id" : "");
     }
 
     public Collection<Permission> getPermissions(Class<? extends BaseModel> owner, Class<? extends BaseModel> property)

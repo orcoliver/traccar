@@ -76,7 +76,7 @@ public class Gl200TextProtocolDecoder extends BaseProtocolDecoder {
             .number("(?:d),")                    // led
             .number("(?:d)?,")                   // gps on need
             .number("(?:d)?,")                   // gps antenna type
-            .number("(?:d),").optional()         // gps antenna state
+            .number("(?:d)?,").optional()        // gps antenna state
             .number("d{14},")                    // last fix time
             .groupBegin()
             .number("(d+),")                     // battery percentage
@@ -388,10 +388,6 @@ public class Gl200TextProtocolDecoder extends BaseProtocolDecoder {
     }
 
     private Object decodeInf(Channel channel, SocketAddress remoteAddress, String sentence) {
-
-        org.traccar.helper.PatternUtil.MatchResult matchResult =
-                org.traccar.helper.PatternUtil.checkPattern(PATTERN_INF.pattern(), sentence);
-
         Parser parser = new Parser(PATTERN_INF, sentence);
         Position position = initPosition(parser, channel, remoteAddress);
         if (position == null) {
@@ -618,7 +614,7 @@ public class Gl200TextProtocolDecoder extends BaseProtocolDecoder {
                 for (int i = 1; i <= deviceCount; i++) {
                     index++; // id
                     index++; // type
-                    position.set(Position.PREFIX_TEMP + i, Short.parseShort(data[index++], 16) * 0.0625);
+                    position.set(Position.PREFIX_TEMP + i, (short) Integer.parseInt(data[index++], 16) * 0.0625);
                 }
             }
         }

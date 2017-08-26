@@ -105,7 +105,10 @@ public class WebServer {
             resourceHandler.setWelcomeFiles(new String[] {"debug.html", "index.html"});
             resourceHandler.setMinMemoryMappedContentLength(-1); // avoid locking files on Windows
         } else {
-            resourceHandler.setCacheControl("max-age=3600,public");
+            String cache = config.getString("web.cacheControl");
+            if (cache != null && !cache.isEmpty()) {
+                resourceHandler.setCacheControl(cache);
+            }
             resourceHandler.setWelcomeFiles(new String[] {"release.html", "index.html"});
         }
         handlers.addHandler(resourceHandler);
