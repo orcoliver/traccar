@@ -155,9 +155,7 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
             return false;
         }
 
-        int length = buf.readUnsignedByte();
-        position.set(Position.KEY_SATELLITES, BitUtil.to(length, 4));
-        length = BitUtil.from(length, 4);
+        position.set(Position.KEY_SATELLITES, BitUtil.to(buf.readUnsignedByte(), 4));
 
         double latitude = buf.readUnsignedInt() / 60.0 / 30000.0;
         double longitude = buf.readUnsignedInt() / 60.0 / 30000.0;
@@ -181,10 +179,6 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
             position.set(Position.KEY_IGNITION, BitUtil.check(flags, 15));
         }
 
-        if (length > 0) {
-            buf.skipBytes(length - 12); // skip reserved
-        }
-
         return true;
     }
 
@@ -202,7 +196,7 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
                 buf.readUnsignedShort(), buf.readUnsignedByte(), buf.readUnsignedShort(), buf.readUnsignedMedium())));
 
         if (length > 0) {
-            buf.skipBytes(length - 8);
+            buf.skipBytes(length - (hasLength ? 9 : 8));
         }
 
         return true;
@@ -462,6 +456,7 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
 
             if (hasLbs(type)) {
                 decodeLbs(position, buf, hasStatus(type));
+                buf.skipBytes(-1);
             }
 
             if (hasStatus(type)) {
@@ -573,7 +568,9 @@ public class Gt06ProtocolDecoder extends BaseProtocolDecoder {
                 getLastLocation(position, position.getDeviceTime());
             }
 
-            decodeLbs(position, buf, true);
+            if (decodeLbs(position, buf, true)) {
+                position.set(Position.KEY_RSSI, buf.readUnsignedByte());
+            }
 
             buf.skipBytes(buf.readUnsignedByte()); // additional cell towers
             buf.skipBytes(buf.readUnsignedByte()); // wifi access point
