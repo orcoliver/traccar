@@ -1,5 +1,6 @@
 /*
- * Copyright 2016 - 2017 Anton Tananaev (anton@traccar.org)
+ * Copyright 2017 Anton Tananaev (anton@traccar.org)
+ * Copyright 2017 Anatoliy Golubev (darth.naihil@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +16,22 @@
  */
 package org.traccar.protocol;
 
-import java.util.TimeZone;
-
 import org.traccar.StringProtocolEncoder;
 import org.traccar.helper.Log;
 import org.traccar.model.Command;
 
-public class Jt600ProtocolEncoder extends StringProtocolEncoder {
+public class AdmProtocolEncoder extends StringProtocolEncoder {
+
     @Override
     protected Object encodeCommand(Command command) {
 
         switch (command.getType()) {
-            case Command.TYPE_ENGINE_STOP:
-                return "(S07,0)";
-            case Command.TYPE_ENGINE_RESUME:
-                return "(S07,1)";
-            case Command.TYPE_SET_TIMEZONE:
-                int offset = TimeZone.getTimeZone(command.getString(Command.KEY_TIMEZONE)).getRawOffset() / 60000;
-                return "(S09,1," + offset + ")";
-            case Command.TYPE_REBOOT_DEVICE:
-                return "(S17)";
+            case Command.TYPE_GET_DEVICE_STATUS:
+                return formatCommand(command, "STATUS\r\n");
+
+            case Command.TYPE_CUSTOM:
+                return formatCommand(command, "{%s}\r\n", Command.KEY_DATA);
+
             default:
                 Log.warning(new UnsupportedOperationException(command.getType()));
                 break;
