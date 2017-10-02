@@ -154,16 +154,18 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
             .text("VP1,")
             .or()
             .groupBegin()
-            .text("V1,")
-            .or()
             .text("V4,")
             .expression("(.*),")                 // response
             .or()
-            .text("V19,")
+            .expression("V[^,]*,")
             .groupEnd()
             .number("(?:(dd)(dd)(dd))?,")        // time (hhmmss)
             .groupEnd()
+            .groupBegin()
             .expression("([ABV])?,")             // validity
+            .or()
+            .number("(d+),")                     // coding scheme
+            .groupEnd()
             .groupBegin()
             .number("-(d+)-(d+.d+),")            // latitude
             .or()
@@ -281,6 +283,10 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
         if (parser.hasNext()) {
             position.setValid(parser.next().equals("A"));
         }
+        if (parser.hasNext()) {
+            parser.nextInt(); // coding scheme
+            position.setValid(true);
+        }
 
         if (parser.hasNext(2)) {
             position.setLatitude(-parser.nextCoordinate());
@@ -392,7 +398,7 @@ public class H02ProtocolDecoder extends BaseProtocolDecoder {
         position.set(Position.KEY_RSSI, parser.nextInt());
         position.set(Position.KEY_SATELLITES, parser.nextInt());
         position.set(Position.KEY_BATTERY_LEVEL, parser.nextInt());
-        position.set("steps", parser.nextInt());
+        position.set(Position.KEY_STEPS, parser.nextInt());
         position.set("turnovers", parser.nextInt());
 
         dateBuilder.setDateReverse(parser.nextInt(0), parser.nextInt(0), parser.nextInt(0));
