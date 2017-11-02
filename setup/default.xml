@@ -217,5 +217,8 @@
     <entry key='tlv.port'>5146</entry>
     <entry key='esky.port'>5147</entry>
     <entry key='genx.port'>5148</entry>
+    <entry key='flespi.port'>5149</entry>
+    <entry key='dway.port'>5150</entry>
+    <entry key='recoda.port'>5151</entry>
 
 </properties>
