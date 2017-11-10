@@ -26,7 +26,7 @@ import java.io.IOException;
 public class CorsResponseFilter implements ContainerResponseFilter {
 
     private static final String ORIGIN_ALL = "*";
-    private static final String HEADERS_ALL = "origin, content-type, accept, authorization";
+    private static final String HEADERS_ALL = "origin, content-type, accept, authorization, x-requested-with";
     private static final String METHODS_ALL = "GET, POST, PUT, DELETE, OPTIONS";
 
     @Override
