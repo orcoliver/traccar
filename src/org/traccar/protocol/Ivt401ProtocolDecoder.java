@@ -18,38 +18,39 @@ package org.traccar.protocol;
 import org.jboss.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
-import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
+import org.traccar.helper.UnitsConverter;
 import org.traccar.model.Position;
 
 import java.net.SocketAddress;
 import java.util.regex.Pattern;
 
-public class OkoProtocolDecoder extends BaseProtocolDecoder {
+public class Ivt401ProtocolDecoder extends BaseProtocolDecoder {
 
-    public OkoProtocolDecoder(OkoProtocol protocol) {
+    public Ivt401ProtocolDecoder(Ivt401Protocol protocol) {
         super(protocol);
     }
 
     private static final Pattern PATTERN = new PatternBuilder()
-            .text("{")
-            .number("(d{15}),").optional()       // imei
-            .number("(dd)(dd)(dd).d+,")          // time
-            .expression("([AV]),")               // validity
-            .number("(dd)(dd.d+),")              // latitude
-            .expression("([NS]),")
-            .number("(ddd)(dd.d+),")             // longitude
-            .expression("([EW]),")
-            .number("(d+.?d*)?,")                // speed
-            .number("(d+.?d*)?,")                // course
+            .text("(")
+            .expression("TL[ABLN],")             // header
+            .number("(d+),")                     // imei
             .number("(dd)(dd)(dd),")             // date (ddmmyy)
+            .number("(dd)(dd)(dd),")             // time (hhmmss)
+            .number("([-+]d+.d+),")              // latitude
+            .number("([-+]d+.d+),")              // longitude
+            .number("(d+),")                     // speed
+            .number("(d+),")                     // course
+            .number("(-?d+.?d*),")               // altitude
             .number("(d+),")                     // satellites
+            .number("(d),")                      // gps status
+            .number("(d+),")                     // rssi
+            .number("(d+),")                     // input
+            .number("(d+),")                     // output
             .number("(d+.d+),")                  // adc
-            .number("(xx),")                     // event
             .number("(d+.d+),")                  // power
-            .number("d,")                        // memory status
-            .number("(xx)")                      // io
+            .number("(d+.d+),")                  // battery
             .any()
             .compile();
 
@@ -62,12 +63,7 @@ public class OkoProtocolDecoder extends BaseProtocolDecoder {
             return null;
         }
 
-        DeviceSession deviceSession;
-        if (parser.hasNext()) {
-            deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
-        } else {
-            deviceSession = getDeviceSession(channel, remoteAddress);
-        }
+        DeviceSession deviceSession = getDeviceSession(channel, remoteAddress, parser.next());
         if (deviceSession == null) {
             return null;
         }
@@ -76,23 +72,24 @@ public class OkoProtocolDecoder extends BaseProtocolDecoder {
         position.setProtocol(getProtocolName());
         position.setDeviceId(deviceSession.getDeviceId());
 
-        DateBuilder dateBuilder = new DateBuilder()
-                .setTime(parser.nextInt(), parser.nextInt(), parser.nextInt());
+        position.setTime(parser.nextDateTime(Parser.DateTimeFormat.DMY_HMS));
 
-        position.setValid(parser.next().equals("A"));
-        position.setLatitude(parser.nextCoordinate());
-        position.setLongitude(parser.nextCoordinate());
-        position.setSpeed(parser.nextDouble(0));
-        position.setCourse(parser.nextDouble(0));
-
-        dateBuilder.setDateReverse(parser.nextInt(), parser.nextInt(), parser.nextInt());
-        position.setTime(dateBuilder.getDate());
+        position.setLatitude(parser.nextDouble());
+        position.setLongitude(parser.nextDouble());
+        position.setSpeed(UnitsConverter.knotsFromKph(parser.nextInt()));
+        position.setCourse(parser.nextInt());
+        position.setAltitude(parser.nextDouble());
 
         position.set(Position.KEY_SATELLITES, parser.nextInt());
+
+        position.setValid(parser.nextInt() > 0);
+
+        position.set(Position.KEY_RSSI, parser.nextInt());
+        position.set(Position.KEY_INPUT, parser.nextBinInt());
+        position.set(Position.KEY_OUTPUT, parser.nextBinInt());
         position.set(Position.PREFIX_ADC + 1, parser.nextDouble());
-        position.set(Position.KEY_EVENT, parser.next());
         position.set(Position.KEY_POWER, parser.nextDouble());
-        position.set(Position.KEY_INPUT, parser.nextHexInt());
+        position.set(Position.KEY_BATTERY, parser.nextDouble());
 
         return position;
     }
