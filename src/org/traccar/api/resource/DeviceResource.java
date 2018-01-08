@@ -18,6 +18,7 @@ package org.traccar.api.resource;
 import org.traccar.Context;
 import org.traccar.api.BaseObjectResource;
 import org.traccar.database.DeviceManager;
+import org.traccar.helper.LogAction;
 import org.traccar.model.Device;
 import org.traccar.model.DeviceTotalDistance;
 
@@ -64,7 +65,11 @@ public class DeviceResource extends BaseObjectResource<Device> {
                 userId = getUserId();
             }
             Context.getPermissionsManager().checkUser(getUserId(), userId);
-            result = deviceManager.getUserItems(userId);
+            if (Context.getPermissionsManager().getUserAdmin(getUserId())) {
+                result = deviceManager.getAllUserItems(userId);
+            } else {
+                result = deviceManager.getUserItems(userId);
+            }
         } else {
             result = new HashSet<Long>();
             for (String uniqueId : uniqueIds) {
@@ -85,6 +90,7 @@ public class DeviceResource extends BaseObjectResource<Device> {
     public Response updateTotalDistance(DeviceTotalDistance entity) throws SQLException {
         Context.getPermissionsManager().checkAdmin(getUserId());
         Context.getDeviceManager().resetTotalDistance(entity);
+        LogAction.resetTotalDistance(getUserId(), entity.getDeviceId());
         return Response.noContent().build();
     }
 

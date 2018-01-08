@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 - 2017 Anton Tananaev (anton@traccar.org)
+ * Copyright 2017 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
-import org.traccar.helper.StringFinder;
 
 import java.nio.charset.StandardCharsets;
 
-public class TotemFrameDecoder extends FrameDecoder {
+public class T57FrameDecoder extends FrameDecoder {
 
     @Override
     protected Object decode(
@@ -33,26 +32,18 @@ public class TotemFrameDecoder extends FrameDecoder {
             return null;
         }
 
-        int beginIndex = buf.indexOf(buf.readerIndex(), buf.writerIndex(), new StringFinder("$$"));
-        if (beginIndex == -1) {
-            return null;
-        } else if (beginIndex > buf.readerIndex()) {
-            buf.readerIndex(beginIndex);
+        String type = buf.toString(buf.readerIndex() + 5, 2, StandardCharsets.US_ASCII);
+        int count = type.equals("F3") ? 12 : 14;
+
+        int index = 0;
+        while (index >= 0 && count > 0) {
+            index = buf.indexOf(index + 1, buf.writerIndex(), (byte) '#');
+            if (index > 0) {
+                count -= 1;
+            }
         }
 
-        int length;
-
-        if (buf.getByte(buf.readerIndex() + 2) == (byte) '0') {
-            length = Integer.parseInt(buf.toString(buf.readerIndex() + 2, 4, StandardCharsets.US_ASCII));
-        } else {
-            length = Integer.parseInt(buf.toString(buf.readerIndex() + 2, 2, StandardCharsets.US_ASCII), 16);
-        }
-
-        if (length <= buf.readableBytes()) {
-            return buf.readBytes(length);
-        }
-
-        return null;
+        return index > 0 ? buf.readBytes(index + 1 - buf.readerIndex()) : null;
     }
 
 }
