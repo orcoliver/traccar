@@ -249,11 +249,10 @@ public class GalileoProtocolDecoder extends BaseProtocolDecoder {
         boolean hasLocation = false;
 
         DeviceSession deviceSession = null;
-        Position position = new Position();
+        Position position = new Position(getProtocolName());
 
         while (buf.readerIndex() < length) {
 
-            // Check if new message started
             int tag = buf.readUnsignedByte();
             if (tags.contains(tag)) {
                 if (hasLocation && position.getFixTime() != null) {
@@ -261,7 +260,7 @@ public class GalileoProtocolDecoder extends BaseProtocolDecoder {
                 }
                 tags.clear();
                 hasLocation = false;
-                position = new Position();
+                position = new Position(getProtocolName()); // new position starts
             }
             tags.add(tag);
 
@@ -279,13 +278,6 @@ public class GalileoProtocolDecoder extends BaseProtocolDecoder {
 
         }
 
-        if (hasLocation && position.getFixTime() != null) {
-            positions.add(position);
-        } else if (position.getAttributes().containsKey(Position.KEY_RESULT)) {
-            getLastLocation(position, null);
-            positions.add(position);
-        }
-
         if (deviceSession == null) {
             deviceSession = getDeviceSession(channel, remoteAddress);
             if (deviceSession == null) {
@@ -293,10 +285,17 @@ public class GalileoProtocolDecoder extends BaseProtocolDecoder {
             }
         }
 
+        if (hasLocation && position.getFixTime() != null) {
+            positions.add(position);
+        } else if (position.getAttributes().containsKey(Position.KEY_RESULT)) {
+            position.setDeviceId(deviceSession.getDeviceId());
+            getLastLocation(position, null);
+            positions.add(position);
+        }
+
         sendReply(channel, buf.readUnsignedShort());
 
         for (Position p : positions) {
-            p.setProtocol(getProtocolName());
             p.setDeviceId(deviceSession.getDeviceId());
         }
 
