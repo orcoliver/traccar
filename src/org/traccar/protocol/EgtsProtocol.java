@@ -15,31 +15,31 @@
  */
 package org.traccar.protocol;
 
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.string.StringDecoder;
-import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.traccar.BaseProtocol;
 import org.traccar.TrackerServer;
 
+import java.nio.ByteOrder;
 import java.util.List;
 
-public class GlobeKeeperProtocol extends BaseProtocol {
+public class EgtsProtocol extends BaseProtocol {
 
-    public GlobeKeeperProtocol() {
-        super("globekeeper");
+    public EgtsProtocol() {
+        super("egts");
     }
 
     @Override
     public void initTrackerServers(List<TrackerServer> serverList) {
-        serverList.add(new TrackerServer(new ConnectionlessBootstrap(), getName()) {
+        TrackerServer server = new TrackerServer(new ServerBootstrap(), getName()) {
             @Override
             protected void addSpecificHandlers(ChannelPipeline pipeline) {
-                pipeline.addLast("stringEncoder", new StringEncoder());
-                pipeline.addLast("stringDecoder", new StringDecoder());
-                pipeline.addLast("objectDecoder", new GlobeKeeperProtocolDecoder(GlobeKeeperProtocol.this));
+                pipeline.addLast("frameDecoder", new EgtsFrameDecoder());
+                pipeline.addLast("objectDecoder", new EgtsProtocolDecoder(EgtsProtocol.this));
             }
-        });
+        };
+        server.setEndianness(ByteOrder.LITTLE_ENDIAN);
+        serverList.add(server);
     }
 
 }
