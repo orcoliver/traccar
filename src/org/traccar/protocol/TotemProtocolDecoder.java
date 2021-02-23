@@ -15,10 +15,12 @@
  */
 package org.traccar.protocol;
 
-import org.jboss.netty.channel.Channel;
+import io.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
+import org.traccar.NetworkMessage;
 import org.traccar.helper.BitUtil;
+import org.traccar.helper.Checksum;
 import org.traccar.helper.DateBuilder;
 import org.traccar.helper.Parser;
 import org.traccar.helper.PatternBuilder;
@@ -244,6 +246,7 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
         }
 
         int io = parser.nextBinInt();
+        position.set(Position.KEY_STATUS, io);
         if (pattern == PATTERN1) {
             position.set(Position.KEY_ALARM, BitUtil.check(io, 0) ? Position.ALARM_SOS : null);
             position.set(Position.PREFIX_IN + 3, BitUtil.check(io, 4));
@@ -408,9 +411,11 @@ public class TotemProtocolDecoder extends BaseProtocolDecoder {
 
         if (channel != null) {
             if (pattern == PATTERN4) {
-                channel.write("$$0014AA" + sentence.substring(sentence.length() - 6));
+                String response = "$$0014AA" + sentence.substring(sentence.length() - 6, sentence.length() - 2);
+                response += String.format("%02X", Checksum.xor(response)).toUpperCase();
+                channel.writeAndFlush(new NetworkMessage(response, remoteAddress));
             } else {
-                channel.write("ACK OK\r\n");
+                channel.writeAndFlush(new NetworkMessage("ACK OK\r\n", remoteAddress));
             }
         }
 

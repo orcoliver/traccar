@@ -15,7 +15,7 @@
  */
 package org.traccar.protocol;
 
-import org.jboss.netty.channel.Channel;
+import io.netty.channel.Channel;
 import org.traccar.BaseProtocolDecoder;
 import org.traccar.DeviceSession;
 import org.traccar.helper.BitUtil;
@@ -93,7 +93,7 @@ public class TelemaxProtocolDecoder extends BaseProtocolDecoder {
             position.setLatitude((Integer.parseInt(readValue(sentence, index, 6), 16) - 5400000) / 30000.0);
 
             if (i == 0 | i == count - 1) {
-                time = new SimpleDateFormat("yyMMddhhmmss").parse(readValue(sentence, index, 12));
+                time = new SimpleDateFormat("yyMMddHHmmss").parse(readValue(sentence, index, 12));
                 position.set(Position.KEY_STATUS, readValue(sentence, index, 8));
             } else {
                 time = new Date(time.getTime() + interval * 1000);

@@ -16,12 +16,12 @@
 package org.traccar;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.ning.http.client.AsyncHttpClient;
 import org.traccar.helper.Checksum;
 import org.traccar.helper.Log;
 import org.traccar.model.Device;
 import org.traccar.model.Position;
 
+import javax.ws.rs.client.Entity;
 import java.util.HashMap;
 import java.util.Map;
 import java.io.UnsupportedEncodingException;
@@ -80,12 +80,12 @@ public class WebDataHandler extends BaseDataHandler {
         }
     }
 
-    public String formatRequest(Position position) {
+    public String formatRequest(Position position) throws UnsupportedEncodingException, JsonProcessingException {
 
         Device device = Context.getIdentityManager().getById(position.getDeviceId());
 
         String request = url
-                .replace("{name}", device.getName())
+                .replace("{name}", URLEncoder.encode(device.getName(), StandardCharsets.UTF_8.name()))
                 .replace("{uniqueId}", device.getUniqueId())
                 .replace("{status}", device.getStatus())
                 .replace("{deviceId}", String.valueOf(position.getDeviceId()))
@@ -98,25 +98,18 @@ public class WebDataHandler extends BaseDataHandler {
                 .replace("{altitude}", String.valueOf(position.getAltitude()))
                 .replace("{speed}", String.valueOf(position.getSpeed()))
                 .replace("{course}", String.valueOf(position.getCourse()))
+                .replace("{accuracy}", String.valueOf(position.getAccuracy()))
                 .replace("{statusCode}", calculateStatus(position));
 
         if (position.getAddress() != null) {
-            try {
-                request = request.replace(
-                        "{address}", URLEncoder.encode(position.getAddress(), StandardCharsets.UTF_8.name()));
-            } catch (UnsupportedEncodingException error) {
-                Log.warning(error);
-            }
+            request = request.replace(
+                    "{address}", URLEncoder.encode(position.getAddress(), StandardCharsets.UTF_8.name()));
         }
 
         if (request.contains("{attributes}")) {
-            try {
-                String attributes = Context.getObjectMapper().writeValueAsString(position.getAttributes());
-                request = request.replace(
-                        "{attributes}", URLEncoder.encode(attributes, StandardCharsets.UTF_8.name()));
-            } catch (UnsupportedEncodingException | JsonProcessingException error) {
-                Log.warning(error);
-            }
+            String attributes = Context.getObjectMapper().writeValueAsString(position.getAttributes());
+            request = request.replace(
+                    "{attributes}", URLEncoder.encode(attributes, StandardCharsets.UTF_8.name()));
         }
 
         if (request.contains("{gprmc}")) {
@@ -129,21 +122,18 @@ public class WebDataHandler extends BaseDataHandler {
     @Override
     protected Position handlePosition(Position position) {
         if (json) {
-            AsyncHttpClient.BoundRequestBuilder requestBuilder = Context.getAsyncHttpClient().preparePost(url);
-            requestBuilder.setBodyEncoding(StandardCharsets.UTF_8.name());
-
-            requestBuilder.addHeader("Content-Type", "application/json; charset=utf-8");
-
-            requestBuilder.setBody(prepareJsonPayload(position));
-            requestBuilder.execute();
-
+            Context.getClient().target(url).request().async().post(Entity.json(prepareJsonPayload(position)));
         } else {
-            Context.getAsyncHttpClient().prepareGet(formatRequest(position)).execute();
+            try {
+                Context.getClient().target(formatRequest(position)).request().async().get();
+            } catch (UnsupportedEncodingException | JsonProcessingException e) {
+                Log.warning(e);
+            }
         }
         return position;
     }
 
-    protected String prepareJsonPayload(Position position) {
+    protected Map<String, Object> prepareJsonPayload(Position position) {
 
         Map<String, Object> data = new HashMap<>();
         Device device = Context.getIdentityManager().getById(position.getDeviceId());
@@ -154,11 +144,7 @@ public class WebDataHandler extends BaseDataHandler {
             data.put(KEY_DEVICE, device);
         }
 
-        try {
-            return Context.getObjectMapper().writeValueAsString(data);
-        } catch (JsonProcessingException e) {
-            Log.warning(e);
-            return null;
-        }
+        return data;
     }
+
 }

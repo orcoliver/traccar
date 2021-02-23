@@ -1,6 +1,6 @@
 /*
- * Copyright 2016 Anton Tananaev (anton@traccar.org)
- * Copyright 2016 Andrey Kunitsyn (andrey@traccar.org)
+ * Copyright 2018 Anton Tananaev (anton@traccar.org)
+ * Copyright 2018 Andrey Kunitsyn (andrey@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.traccar.model;
+package org.traccar.notificators;
 
-public class DeviceTotalDistance {
+import org.traccar.Context;
+import org.traccar.model.Event;
+import org.traccar.model.Position;
 
-    private long deviceId;
+public final class NotificatorWeb extends Notificator {
 
-    public long getDeviceId() {
-        return deviceId;
-    }
-
-    public void setDeviceId(long deviceId) {
-        this.deviceId = deviceId;
-    }
-
-    private double totalDistance;
-
-    public double getTotalDistance() {
-        return totalDistance;
-    }
-
-    public void setTotalDistance(double totalDistance) {
-        this.totalDistance = totalDistance;
+    @Override
+    public void sendSync(long userId, Event event, Position position) {
+        Context.getConnectionManager().updateEvent(userId, event);
     }
 
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2016 Anton Tananaev (anton@traccar.org)
- * Copyright 2016 Andrey Kunitsyn (andrey@traccar.org)
+ * Copyright 2018 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.traccar.notification;
+package org.traccar;
 
-public class MailMessage {
+import java.net.SocketAddress;
 
-    private String subject;
-    private String body;
+public class NetworkMessage {
 
-    public MailMessage(String subject, String body) {
-        this.subject = subject;
-        this.body = body;
+    private final SocketAddress remoteAddress;
+    private final Object message;
+
+    public NetworkMessage(Object message, SocketAddress remoteAddress) {
+        this.message = message;
+        this.remoteAddress = remoteAddress;
     }
 
-    public String getSubject() {
-        return subject;
+    public SocketAddress getRemoteAddress() {
+        return remoteAddress;
     }
 
-    public String getBody() {
-        return body;
+    public Object getMessage() {
+        return message;
     }
+
 }

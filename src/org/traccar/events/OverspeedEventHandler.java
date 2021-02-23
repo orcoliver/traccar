@@ -19,6 +19,7 @@ package org.traccar.events;
 import java.util.Collections;
 import java.util.Map;
 
+import io.netty.channel.ChannelHandler;
 import org.traccar.BaseEventHandler;
 import org.traccar.Context;
 import org.traccar.model.Device;
@@ -27,6 +28,7 @@ import org.traccar.model.Event;
 import org.traccar.model.Geofence;
 import org.traccar.model.Position;
 
+@ChannelHandler.Sharable
 public class OverspeedEventHandler extends BaseEventHandler {
 
     public static final String ATTRIBUTE_SPEED_LIMIT = "speedLimit";
@@ -115,7 +117,7 @@ public class OverspeedEventHandler extends BaseEventHandler {
         double geofenceSpeedLimit = 0;
         long overspeedGeofenceId = 0;
 
-        if (Context.getGeofenceManager() != null) {
+        if (Context.getGeofenceManager() != null && device.getGeofenceIds() != null) {
             for (long geofenceId : device.getGeofenceIds()) {
                 Geofence geofence = Context.getGeofenceManager().getById(geofenceId);
                 if (geofence != null) {

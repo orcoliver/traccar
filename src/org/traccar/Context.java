@@ -17,13 +17,14 @@ package org.traccar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.ning.http.client.AsyncHttpClient;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Properties;
 
-import com.ning.http.client.AsyncHttpClientConfigDefaults;
+import com.fasterxml.jackson.datatype.jsr353.JSR353Module;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import org.apache.velocity.app.VelocityEngine;
 import org.eclipse.jetty.util.URIUtil;
 import org.traccar.database.CalendarManager;
@@ -76,15 +77,15 @@ import org.traccar.geolocation.MozillaGeolocationProvider;
 import org.traccar.geolocation.OpenCellIdGeolocationProvider;
 import org.traccar.notification.EventForwarder;
 import org.traccar.notification.JsonTypeEventForwarder;
-import org.traccar.notification.MultiPartEventForwarder;
+import org.traccar.notification.NotificatorManager;
 import org.traccar.reports.model.TripsConfig;
-import org.traccar.smpp.SmppClient;
+import org.traccar.sms.SmsManager;
 import org.traccar.web.WebServer;
 
-public final class Context {
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0";
+public final class Context {
 
     private Context() {
     }
@@ -203,21 +204,22 @@ public final class Context {
         return notificationManager;
     }
 
+    private static NotificatorManager notificatorManager;
+
+    public static NotificatorManager getNotificatorManager() {
+        return notificatorManager;
+    }
+
     private static VelocityEngine velocityEngine;
 
     public static VelocityEngine getVelocityEngine() {
         return velocityEngine;
     }
 
-    private static AsyncHttpClient asyncHttpClient;
+    private static Client client = ClientBuilder.newClient();
 
-    static {
-        System.setProperty(AsyncHttpClientConfigDefaults.ASYNC_CLIENT + "userAgent", USER_AGENT);
-        asyncHttpClient = new AsyncHttpClient();
-    }
-
-    public static AsyncHttpClient getAsyncHttpClient() {
-        return asyncHttpClient;
+    public static Client getClient() {
+        return client;
     }
 
     private static EventForwarder eventForwarder;
@@ -256,10 +258,10 @@ public final class Context {
         return statisticsManager;
     }
 
-    private static SmppClient smppClient;
+    private static SmsManager smsManager;
 
-    public static SmppClient getSmppManager() {
-        return smppClient;
+    public static SmsManager getSmsManager() {
+        return smsManager;
     }
 
     private static MotionEventHandler motionEventHandler;
@@ -343,11 +345,17 @@ public final class Context {
         }
 
         objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JSR353Module());
         objectMapper.setConfig(
                 objectMapper.getSerializationConfig().without(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS));
         if (Context.getConfig().getBoolean("mapper.prettyPrintedJson")) {
             objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         }
+
+        JacksonJsonProvider jsonProvider =
+                new JacksonJaxbJsonProvider(objectMapper, JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS);
+        client = ClientBuilder.newClient().register(jsonProvider);
+
 
         if (config.hasKey("database.url")) {
             dataManager = new DataManager(config);
@@ -385,6 +393,15 @@ public final class Context {
 
         tripsConfig = initTripsConfig();
 
+        if (config.getBoolean("sms.enable")) {
+            final String smsManagerClass = config.getString("sms.manager.class", "org.traccar.smpp.SmppClient");
+            try {
+                smsManager = (SmsManager) Class.forName(smsManagerClass).newInstance();
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                Log.warning("Error loading SMS Manager class : " + smsManagerClass, e);
+            }
+        }
+
         if (config.getBoolean("event.enable")) {
             initEventsModule();
         }
@@ -392,11 +409,7 @@ public final class Context {
         serverManager = new ServerManager();
 
         if (config.getBoolean("event.forward.enable")) {
-            if (Context.getConfig().getBoolean("event.forward.payloadAsParamMode")) {
-                eventForwarder = new MultiPartEventForwarder();
-            } else {
-                eventForwarder = new JsonTypeEventForwarder();
-            }
+            eventForwarder = new JsonTypeEventForwarder();
         }
 
         attributesManager = new AttributesManager(dataManager);
@@ -406,10 +419,6 @@ public final class Context {
         commandsManager = new CommandsManager(dataManager, config.getBoolean("commands.queueing"));
 
         statisticsManager = new StatisticsManager();
-
-        if (config.getBoolean("sms.smpp.enable")) {
-            smppClient = new SmppClient();
-        }
 
     }
 
@@ -441,6 +450,7 @@ public final class Context {
         calendarManager = new CalendarManager(dataManager);
         maintenancesManager = new MaintenancesManager(dataManager);
         notificationManager = new NotificationManager(dataManager);
+        notificatorManager = new NotificatorManager();
         Properties velocityProperties = new Properties();
         velocityProperties.setProperty("file.resource.loader.path",
                 Context.getConfig().getString("templates.rootPath", "templates") + "/");
@@ -471,6 +481,10 @@ public final class Context {
     public static void init(IdentityManager testIdentityManager) {
         config = new Config();
         objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JSR353Module());
+        JacksonJsonProvider jsonProvider =
+                new JacksonJaxbJsonProvider(objectMapper, JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS);
+        client = ClientBuilder.newClient().register(jsonProvider);
         identityManager = testIdentityManager;
     }
 
