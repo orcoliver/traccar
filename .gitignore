@@ -9,3 +9,7 @@ nbactions.xml
 .checkstyle
 setup/*.exe
 setup/*.zip
+.gradle
+out
+build
+src/main/java/org/traccar/protobuf
